@@ -17,7 +17,7 @@ namespace pmgd {
     bool Tick(unsigned int val=1){
       itime = std::min(itime + val, mtime);
       ftime = itime * dtime;
-      return itime != mtime;
+      return itime == mtime;
     }
 
     unsigned int mtime, itime;

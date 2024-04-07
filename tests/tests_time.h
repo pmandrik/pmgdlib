@@ -26,9 +26,9 @@ TEST(pmlib_time, test_ticker) {
     // Timer must start from 0
     EXPECT_EQ(ticker.itime, 0);
 
-    // tick return true if still can tick (itime < MAX_TIME)
+    // tick return `false` if it is not finished (itime < MAX_TIME)
     // After one tick itime == 1
-    EXPECT_EQ(tick_timer(ticker, 1), true);
+    EXPECT_EQ(tick_timer(ticker, 1), false);
     EXPECT_EQ(ticker.itime, 1);
 
     // after Reset() itime == 0 again
@@ -36,24 +36,39 @@ TEST(pmlib_time, test_ticker) {
     EXPECT_EQ(ticker.itime, 0);
 
     // after MAX_TIME ticks
-    EXPECT_EQ(tick_timer(ticker, MAX_TIME), false);
+    EXPECT_EQ(tick_timer(ticker, MAX_TIME), true);
     EXPECT_EQ(ticker.itime, MAX_TIME);
     ticker.Reset();
 
-    // example of tick loop
-    while(ticker.Tick()) continue;
+    // examples of tick loop
+    while(not ticker.Tick()) continue;
     EXPECT_EQ(ticker.itime, MAX_TIME);
     ticker.Reset();
+
+    int finish_counters = 0;
+    int zero_counters   = 0;
+    for(int i = 0; i < MAX_TIME*10; i++){
+        if(ticker.itime == 0) zero_counters++;
+        bool finish = ticker.Tick();
+        if(finish) {
+            finish_counters++;
+            ticker.Reset();
+        }
+    }
 
     // after MAX_TIME ticks
-    EXPECT_EQ(tick_timer(ticker, MAX_TIME/10, 10), false);
+    EXPECT_EQ(tick_timer(ticker, MAX_TIME/10, 10), true);
     EXPECT_EQ(ticker.itime, MAX_TIME);
     ticker.Reset();
 
     // ftime
-    std::cout << ticker.ftime << " " << MAX_TIME/2. << std::endl;
     ticker.Tick(MAX_TIME/2);
-    EXPECT_EQ(ticker.ftime, MAX_TIME/2./float(MAX_TIME));
+    EXPECT_FLOAT_EQ(ticker.ftime, MAX_TIME/2./float(MAX_TIME));
+
+    // Set()
+    ticker.Set(MAX_TIME/5);
+    EXPECT_FLOAT_EQ(ticker.ftime, MAX_TIME/5./float(MAX_TIME));
+    EXPECT_FLOAT_EQ(ticker.itime, MAX_TIME/5);
 }
 
 #endif

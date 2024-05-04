@@ -7,21 +7,25 @@
 
 namespace pmgd {
 
+  //! Ticker class around `itime` counter going from [0, MAX_TIME]
   class Ticker {
     public:
-    Ticker(){};
-    Ticker(unsigned int max_time) : mtime(max_time) { dtime = 1./float(mtime); Reset(); }
-    inline void Set(unsigned int time){itime = time; ftime = itime * dtime;}
-    inline void Reset(){ Set(0); }
+      Ticker(){};
+      Ticker(unsigned int max_time) : mtime(max_time) { dtime = 1./float(mtime); Reset(); }
 
-    bool Tick(unsigned int val=1){
-      itime = std::min(itime + val, mtime);
-      ftime = itime * dtime;
-      return itime == mtime;
-    }
+      //! set `this->itime` to `time`
+      inline void Set(unsigned int time){itime = std::min(time, mtime); ftime = itime * dtime;}
+      inline void Reset(){ Set(0); }
 
-    unsigned int mtime, itime;
-    float dtime, ftime;
+      //! increment `itime` by `val` MAX_TIME; return `true` if itime == MAX_TIME
+      bool Tick(unsigned int val=1){
+        itime = std::min(itime + val, mtime);
+        ftime = itime * dtime;
+        return itime == mtime;
+      }
+
+      unsigned int mtime, itime;
+      float dtime, ftime;
   };
 };
 

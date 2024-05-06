@@ -74,6 +74,62 @@ TEST(pmlib_pipeline, internal_loop) {
   EXPECT_EQ(pg.GetPipeline().size(), 10);
 }
 
+TEST(pmlib_pipeline, one_to_many_1) {
+  PipelineGraph pg;
+  EXPECT_EQ(pg.AddNode(10), PM_SUCCESS);
+
+  // 10 -> 1, 2, 3, 4, 5
+  for(int i = 0; i < 5; i++){
+    EXPECT_EQ(pg.AddNode(i + 1), PM_SUCCESS);
+    EXPECT_EQ(pg.AddEdge(10, i + 1), PM_SUCCESS);
+  }
+
+  std::vector<int*> pl = pg.GetPipeline();
+  EXPECT_EQ(pl.size(), 6);
+  EXPECT_EQ(*pl.at(0), 10);
+}
+
+TEST(pmlib_pipeline, one_to_many_2) {
+  PipelineGraph pg;
+  EXPECT_EQ(pg.AddNode(-1), PM_SUCCESS);
+  EXPECT_EQ(pg.AddNode(0), PM_SUCCESS);
+  EXPECT_EQ(pg.AddEdge(-1, 0), PM_SUCCESS);
+
+  // -1 -> 0 -> 10 -> 1 -> 100
+  //       0 -> 2
+
+  EXPECT_EQ(pg.AddNode(2), PM_SUCCESS);
+  EXPECT_EQ(pg.AddEdge(0, 2), PM_SUCCESS);
+
+  EXPECT_EQ(pg.AddNode(10), PM_SUCCESS);
+  EXPECT_EQ(pg.AddEdge(0, 10), PM_SUCCESS);
+
+  EXPECT_EQ(pg.AddNode(1), PM_SUCCESS);
+  EXPECT_EQ(pg.AddEdge(10, 1), PM_SUCCESS);
+
+  EXPECT_EQ(pg.AddNode(100), PM_SUCCESS);
+  EXPECT_EQ(pg.AddEdge(1, 100), PM_SUCCESS);
+
+  std::vector<int*> pl = pg.GetPipeline();
+  EXPECT_EQ(pl.size(), 6);
+  EXPECT_EQ(*pl.at(0), -1);
+  EXPECT_EQ(*pl.at(1), 0);
+}
+
+TEST(pmlib_pipeline, short_and_long_path) {
+  PipelineGraph pg;
+  pg.AddNodes({0, 1}); // start & endif
+  pg.AddNodes({10, 11, 12, 13}); // short
+  pg.AddEdges({{0, 10}, {10, 11}, {11, 12}, {12, 13}, {13, 1}});
+  pg.AddNodes({20, 21, 22, 23, 24, 25, 26}); // long
+  pg.AddEdges({{0, 20}, {20, 21}, {21, 22}, {22, 23}, {23, 24}, {24, 25}, {25, 26}, {26, 1}});
+
+  std::vector<int*> pl = pg.GetPipeline();
+  EXPECT_EQ(pl.size(), 13);
+  EXPECT_EQ(*pl.at(0), 0);
+  EXPECT_EQ(*pl.at(pl.size()-1), 1);
+}
+
 TEST(pmlib_pipeline, tree_graph) {
   PipelineGraph pg;
 
@@ -93,7 +149,9 @@ TEST(pmlib_pipeline, tree_graph) {
     }
   }
 
-
+  std::vector<int*> pl = pg.GetPipeline();
+  EXPECT_EQ(pl.size(), 13);
+  EXPECT_EQ(*pl.at(12), 1);
 }
 
 #endif

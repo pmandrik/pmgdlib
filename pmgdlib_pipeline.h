@@ -40,19 +40,22 @@ namespace pmgd {
 
       std::unordered_map<int, Node*> nodes;
 
-      bool GetPipelineRec(Node* source, std::set<int>* veto){
-        for(auto it = source->sources.begin(); it != source->sources.end(); ++it){
+      bool GetPipelineRec(Node* head, std::set<int>* veto){
+        int new_priority = head->priority-1;
+        for(auto it = head->sources.begin(); it != head->sources.end(); ++it){
           int node_id = *it;
-          std::cout << node_id << " " << source->id << std::endl;
+          // std::cout << "node, head = " << node_id << " " << head->id << std::endl;
           if(veto->count(node_id)) return false;
 
           auto find = nodes.find(node_id);
           if(find == nodes.end()) continue;
           auto node = find->second;
 
+          if(node->priority <= new_priority) continue;
           veto->insert(node_id);
-          node->priority = source->priority-1;
+          node->priority = head->priority-1;
           if(not GetPipelineRec(node, veto)) return false;
+          veto->erase(node_id);
         }
         return true;
       }
@@ -62,6 +65,14 @@ namespace pmgd {
       int AddNode(int id, int local_priority = 0){
         if(nodes.count(id)) return PM_ERROR_DUPLICATE;
         nodes[id] = new Node(id, local_priority);
+        return PM_SUCCESS;
+      }
+
+      int AddNodes(std::vector<int> ids){
+        for(int ret, i = 0; i < (int)ids.size(); ++i){
+          if((ret = AddNode(ids.at(i), 0)) != PM_SUCCESS)
+            return ret;
+        }
         return PM_SUCCESS;
       }
 
@@ -90,6 +101,23 @@ namespace pmgd {
         Node* node_source = find_source->second;
         node_source->targets.insert(target_id);
 
+        return PM_SUCCESS;
+      }
+
+//       int AddEdges(std::vector<int> edges){
+//         return AddEdge(edges.at(0), edges.at(1));
+//       }
+//
+//       int AddEdges(std::vector<int> edge, std::vector<int> edges...){
+//         if(int ret; (ret = AddEdge(edge.at(0), edge.at(1))) != PM_SUCCESS) return ret;
+//         return AddEdges(edges);
+//       }
+
+      int AddEdges(std::vector<std::vector<int>> edges){
+        for(int ret, i = 0; i < (int)edges.size(); ++i){
+          if((ret = AddEdge(edges.at(i).at(0), edges.at(i).at(1))) != PM_SUCCESS)
+            return ret;
+        }
         return PM_SUCCESS;
       }
 
@@ -137,13 +165,42 @@ namespace pmgd {
 
         // fill answer with data
         for(auto it: all_nodes_sorted){
-          std::cout << it->id << std::endl;
+          // std::cout << it->id << " pr " << it->priority << std::endl;
           answer.push_back(&(it->id));
         }
 
         return answer;
       }
   };
+
+
+  //! Pipeline
+  //! "sla_back->sla_backbuff->sla_backloop->sla_fbuffer"
+  /// expect input as "A->B->C,D->E,E->C"
+  //       /// at first split into "A->B->C", "D->E", "E->C"
+  //       std::vector<std::string> value_cpp_parts;
+  //       pm::split_string_strip(relation, value_cpp_parts, ",");
+  //       if( not value_cpp_parts.size() ){
+  //         msg_err(__PFN__, "skip empty relation");
+  //         return;
+  //       } MSG_DEBUG(__PFN__, "find relation with N parts = ", value_cpp_parts.size());
+  //
+  //       /// then split "A->B->C" split into "A", "B", "C"
+  //       /// and add relations as AddRelation("A","B"), AddRelation("B","C")
+  //       for(auto value_cpp_part : value_cpp_parts){
+  //         std::vector<std::string> conn_parts;
+  //         pm::split_string_strip(value_cpp_part, conn_parts, "->");
+  //         if( conn_parts.size() < 2 ){
+  //           msg_err(__PFN__, "skip relation without \"->\" separated parts");
+  //           continue;
+  //         } MSG_DEBUG(__PFN__, "find relation with N in connection = ", conn_parts.size());
+  //
+  //         for(int i = 0; i < conn_parts.size()-1; ++i){
+  //           string src = conn_parts[i];
+  //           string tgt = conn_parts[i+1];
+  //           AddRelation( src , tgt );
+  //         }
+  //       }
 };
 
 #endif

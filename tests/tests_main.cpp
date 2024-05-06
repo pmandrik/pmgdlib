@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "tests_string.h"
 #include "tests_time.h"
 #include "tests_pipeline.h"
 

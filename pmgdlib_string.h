@@ -7,6 +7,7 @@
 
 namespace pmgd {
 
+  // General functions ============================================================================================================================
   //! remove whitespaces at the begin of the string
   inline void lstrip(std::string &s) {
     if(not s.size()) return;
@@ -40,12 +41,51 @@ namespace pmgd {
     answer.push_back( str.substr(i_start, std::string::npos) );
   }
 
+  //! strip every separated part of the string
   void split_string_strip(std::string str, std::vector<std::string> & answer, const std::string & sep = " "){
     split_string(str, answer, sep);
     for(size_t i = 0; i < answer.size(); ++i){
       strip(answer[i]);
     }
   }
+
+  //! replace all substrings `from` to substring `to` and return number of replacements
+  int replace_all(std::string & str, const std::string& from, const std::string& to) {
+    int count = 0;
+    size_t start_pos = 0;
+    while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length();
+        count++;
+    }
+    return count;
+  }
+
+  //! to_string value and add leading zeros e.g. to_string_with_leading_zeros(1999, 8) -> "00001999"
+  std::string to_string_with_leading_zeros(int integer, unsigned int N_symbols){
+    std::string str = std::to_string( abs(integer) );
+    if(N_symbols < str.size()) return str.substr(0, N_symbols);
+    if(integer < 0)
+      return std::string("-") + std::string(N_symbols - str.size(), '0') + str;
+    return std::string(N_symbols - str.size(), '0') + str;
+  }
+
+  //! 'abc' -> 'ABC'
+  void to_upper(std::string & str){
+    for(size_t i=0; str[i]!='\0'; i++){
+      if (str[i] >= 'a' && str[i] <= 'z')
+        str[i] = str[i] - 32;
+    }
+  }
+
+  bool bool_from_string(std::string val, bool def_answer = true){
+    to_upper(val);
+    if(not val.size() or val=="FALSE" or val=="NULL" or val=="NULLPTR" or val=="0" or val=="OFF") return false;
+    if(val=="TRUE" or val=="1" or val=="ON") return true;
+    return def_answer;
+  }
+
+  // Special functions ============================================================================================================================
 
 };
 

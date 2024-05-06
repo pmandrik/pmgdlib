@@ -37,11 +37,17 @@ TEST(pmlib_pipeline, split) {
   EXPECT_EQ(parts.at(2), "");
   EXPECT_EQ(parts.at(3), "");
   EXPECT_EQ(parts.at(4), " 55555 666666");
-
   parts.clear();
+
   txt = "111";
   split_string(txt, parts, "11");
   EXPECT_EQ(parts.at(0), "");
+  EXPECT_EQ(parts.at(1), "1");
+  parts.clear();
+
+  txt = "1 2 1";
+  split_string_strip(txt, parts, "2");
+  EXPECT_EQ(parts.at(0), "1");
   EXPECT_EQ(parts.at(1), "1");
 }
 

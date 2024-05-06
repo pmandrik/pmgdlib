@@ -40,6 +40,13 @@ namespace pmgd {
     answer.push_back( str.substr(i_start, std::string::npos) );
   }
 
+  void split_string_strip(std::string str, std::vector<std::string> & answer, const std::string & sep = " "){
+    split_string(str, answer, sep);
+    for(size_t i = 0; i < answer.size(); ++i){
+      strip(answer[i]);
+    }
+  }
+
 };
 
 #endif

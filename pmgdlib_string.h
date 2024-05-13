@@ -28,7 +28,7 @@ namespace pmgd {
   }
 
   //! split string by sep[arator] into answer vector
-  void split_string(std::string &str, std::vector<std::string> &answer, const std::string &sep = " "){
+  void split_string(const std::string &str, std::vector<std::string> &answer, std::string sep = " "){
     size_t sep_size = sep.size();
     size_t i_start = 0, i_end = 0;
     for(size_t i_max = str.size(); i_end + sep_size < i_max;){
@@ -42,11 +42,30 @@ namespace pmgd {
   }
 
   //! strip every separated part of the string
-  void split_string_strip(std::string str, std::vector<std::string> & answer, const std::string & sep = " "){
+  void split_string_strip(const std::string &str, std::vector<std::string> & answer, std::string sep = " "){
     split_string(str, answer, sep);
     for(size_t i = 0; i < answer.size(); ++i){
       strip(answer[i]);
     }
+  }
+
+  //! join string
+  std::string join_strings(const std::vector<std::string> &strings, std::string sep = "") {
+    std::string answer;
+    for(size_t i = 0, i_max = strings.size(); i < i_max; ++i){
+      answer += strings[i];
+      if(i != i_max - 1) answer += sep;
+    }
+    return answer;
+  }
+
+  std::string join_string_ptrs(const std::vector<std::string*> &strings, std::string sep = "") {
+    std::string answer;
+    for(size_t i = 0, i_max = strings.size(); i < i_max; ++i){
+      answer += *(strings[i]);
+      if(i != i_max - 1) answer += sep;
+    }
+    return answer;
   }
 
   //! replace all substrings `from` to substring `to` and return number of replacements
@@ -61,13 +80,13 @@ namespace pmgd {
     return count;
   }
 
-  //! to_string value and add leading zeros e.g. to_string_with_leading_zeros(1999, 8) -> "00001999"
-  std::string to_string_with_leading_zeros(int integer, unsigned int N_symbols){
+  //! to_string value and add leading symbol e.g. to_string_with_leading(1999, 8, '0') -> "00001999"
+  std::string to_string_with_leading(int integer, unsigned int N_symbols, const char symbol){
     std::string str = std::to_string( abs(integer) );
     if(N_symbols < str.size()) return str.substr(0, N_symbols);
     if(integer < 0)
-      return std::string("-") + std::string(N_symbols - str.size(), '0') + str;
-    return std::string(N_symbols - str.size(), '0') + str;
+      return std::string("-") + std::string(N_symbols - str.size(), symbol) + str;
+    return std::string(N_symbols - str.size(), symbol) + str;
   }
 
   //! 'abc' -> 'ABC'

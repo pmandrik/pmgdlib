@@ -9,7 +9,7 @@
 
 using namespace pmgd;
 
-void make_linear_graph(PipelineGraph & pg, int start_index = 0){
+void make_linear_graph(PipelineGraph<int> & pg, int start_index = 0){
   // 0->1->2->3->4->5->6->7->8->9
   for(int i = 0; i < 10; i++)
     EXPECT_EQ(pg.AddNode(start_index+i), PM_SUCCESS);
@@ -152,6 +152,29 @@ TEST(pmlib_pipeline, tree_graph) {
   std::vector<int*> pl = pg.GetPipeline();
   EXPECT_EQ(pl.size(), 13);
   EXPECT_EQ(*pl.at(12), 1);
+}
+
+std::string chains_to_pipelines(std::string str){
+  data_string_to_pipeline data;
+  string_to_pipeline(str, data);
+
+  PipelineGraph<std::string> pg;
+  for(auto node : data.nodes){
+    pg.AddNode(node);
+  }
+
+  for(auto edge : data.edges){
+    pg.AddEdge(edge.first, edge.second);
+  }
+
+  std::vector<std::string*> pl = pg.GetPipeline();
+  return join_string_ptrs(pl);
+}
+
+
+TEST(pmlib_pipeline, string_to_pipeline) {
+  EXPECT_EQ(chains_to_pipelines("  A->B->C,  X->A, D->X    "), "DXABC");
+  EXPECT_EQ(chains_to_pipelines("MAPA->DANA(   XXX  )->CAMO-MILE,"), "MAPADANA(   XXX  )CAMO-MILE");
 }
 
 #endif

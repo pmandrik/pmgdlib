@@ -12,6 +12,7 @@ namespace pmgd {
     PM_SUCCESS = 0,
     PM_ERROR_DUPLICATE = 1,
     PM_ERROR_404 = 404,
+    PM_ERROR_500 = 500,
   };
 
 };

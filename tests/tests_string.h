@@ -60,12 +60,12 @@ TEST(pmlib_string, replace) {
   EXPECT_EQ(txt, "1");
 }
 
-TEST(pmlib_string, to_string_with_leading_zeros) {
-  EXPECT_EQ(to_string_with_leading_zeros(1999, 8), "00001999");
-  EXPECT_EQ(to_string_with_leading_zeros(1999, 4), "1999");
-  EXPECT_EQ(to_string_with_leading_zeros(1999, 2), "19");
-  EXPECT_EQ(to_string_with_leading_zeros(1999, 0), "");
-  EXPECT_EQ(to_string_with_leading_zeros(-1999, 8), "-00001999");
+TEST(pmlib_string, to_string_with_leading) {
+  EXPECT_EQ(to_string_with_leading(1999, 8, '0'), "00001999");
+  EXPECT_EQ(to_string_with_leading(1999, 4, '0'), "1999");
+  EXPECT_EQ(to_string_with_leading(1999, 2, '0'), "19");
+  EXPECT_EQ(to_string_with_leading(1999, 0, '0'), "");
+  EXPECT_EQ(to_string_with_leading(-1999, 8, 'x'), "-xxxx1999");
 }
 
 TEST(pmlib_string, to_upper) {

@@ -6,6 +6,7 @@
 #define PMGDLIB_PIPELINE_HH 1
 
 #include "pmgdlib_core.h"
+#include "pmgdlib_string.h"
 
 namespace pmgd {
 
@@ -18,16 +19,17 @@ namespace pmgd {
   //!   Sources of one node are sorted by priority.
   //!   Graph maybe disconnected, then any order of separated parts is valid.
   //! Not RT
+  template <typename NODE_ID_TYPE = int>
   class PipelineGraph {
     private:
       class Node {
         public:
-          Node(int id, int priority){this->id = id; this->local_priority = local_priority;}
-          int id;
+          Node(NODE_ID_TYPE id, int priority){this->id = id; this->local_priority = local_priority;}
+          NODE_ID_TYPE id;
           int local_priority;
           int priority = 0;
-          std::set<int> sources;
-          std::set<int> targets;
+          std::set<NODE_ID_TYPE> sources;
+          std::set<NODE_ID_TYPE> targets;
       };
 
       struct CmpNodePtr {
@@ -38,12 +40,12 @@ namespace pmgd {
         }
       };
 
-      std::unordered_map<int, Node*> nodes;
+      std::unordered_map<NODE_ID_TYPE, Node*> nodes;
 
-      bool GetPipelineRec(Node* head, std::set<int>* veto){
+      bool GetPipelineRec(Node* head, std::set<NODE_ID_TYPE>* veto){
         int new_priority = head->priority-1;
         for(auto it = head->sources.begin(); it != head->sources.end(); ++it){
-          int node_id = *it;
+          NODE_ID_TYPE node_id = *it;
           // std::cout << "node, head = " << node_id << " " << head->id << std::endl;
           if(veto->count(node_id)) return false;
 
@@ -62,13 +64,13 @@ namespace pmgd {
 
     public:
       //! add new node with given id if id not in the graph
-      int AddNode(int id, int local_priority = 0){
+      int AddNode(NODE_ID_TYPE id, int local_priority = 0){
         if(nodes.count(id)) return PM_ERROR_DUPLICATE;
         nodes[id] = new Node(id, local_priority);
         return PM_SUCCESS;
       }
 
-      int AddNodes(std::vector<int> ids){
+      int AddNodes(std::vector<NODE_ID_TYPE> ids){
         for(int ret, i = 0; i < (int)ids.size(); ++i){
           if((ret = AddNode(ids.at(i), 0)) != PM_SUCCESS)
             return ret;
@@ -78,7 +80,7 @@ namespace pmgd {
 
       //! remove node with given id if id is in the graph
       //! do not touch edges or other nodes
-      int RemoveNode(int id){
+      int RemoveNode(NODE_ID_TYPE id){
         auto find = nodes.find(id);
         if(find == nodes.end()) return PM_ERROR_404;
         nodes.erase(find);
@@ -88,7 +90,7 @@ namespace pmgd {
       }
 
       //! add edge with direction from source to target
-      int AddEdge(int source_id, int target_id){
+      int AddEdge(NODE_ID_TYPE source_id, NODE_ID_TYPE target_id){
         auto find_target = nodes.find(target_id);
         if(find_target == nodes.end()) return PM_ERROR_404;
 
@@ -113,7 +115,7 @@ namespace pmgd {
 //         return AddEdges(edges);
 //       }
 
-      int AddEdges(std::vector<std::vector<int>> edges){
+      int AddEdges(std::vector<std::vector<NODE_ID_TYPE>> edges){
         for(int ret, i = 0; i < (int)edges.size(); ++i){
           if((ret = AddEdge(edges.at(i).at(0), edges.at(i).at(1))) != PM_SUCCESS)
             return ret;
@@ -121,7 +123,7 @@ namespace pmgd {
         return PM_SUCCESS;
       }
 
-      int RemoveEdge(int source_id, int target_id){
+      int RemoveEdge(NODE_ID_TYPE source_id, NODE_ID_TYPE target_id){
         auto find_target = nodes.find(target_id);
         if(find_target != nodes.end()) {
           Node* node_target = find_target->second;
@@ -136,8 +138,8 @@ namespace pmgd {
       }
 
       //! build vector with elements where all targets are after sources
-      std::vector<int*> GetPipeline() {
-        std::vector<int*> answer;
+      std::vector<NODE_ID_TYPE*> GetPipeline(){
+        std::vector<NODE_ID_TYPE*> answer;
 
         // get heads - nodes without targets
         std::vector<Node*> heads;
@@ -149,7 +151,7 @@ namespace pmgd {
         if(not heads.size()) return answer;
 
         // set node priority
-        std::set<int> veto;
+        std::set<NODE_ID_TYPE> veto;
         for(auto head : heads){
           veto.insert(head->id);
           if(not GetPipelineRec(head, &veto)) return answer;
@@ -201,6 +203,42 @@ namespace pmgd {
   //           AddRelation( src , tgt );
   //         }
   //       }
+
+  struct data_string_to_pipeline {
+    std::set<std::string> nodes;
+    std::vector<std::pair<std::string,std::string>> edges;
+  };
+
+  int chain_to_pipeline(const std::string &str, data_string_to_pipeline &data){
+    std::vector<std::string> nodes;
+    split_string_strip(str, nodes, "->");
+    if(nodes.size() < 2){
+      return PM_ERROR_500;
+    }
+
+    for(size_t i = 0; i < nodes.size()-1; ++i){
+      std::string src = nodes[i];
+      std::string tgt = nodes[i+1];
+
+      data.nodes.insert(src);
+      data.nodes.insert(tgt);
+      data.edges.push_back(std::make_pair(src, tgt));
+    }
+
+    return PM_SUCCESS;
+  }
+
+  int string_to_pipeline(const std::string &str, data_string_to_pipeline &data){
+    std::vector<std::string> chains;
+    split_string_strip(str, chains, ",");
+
+    for(auto chain: chains){
+      int ret = chain_to_pipeline(chain, data);
+      if(ret != PM_SUCCESS)
+          return ret;
+    }
+    return PM_SUCCESS;
+  }
 };
 
 #endif

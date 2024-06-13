@@ -31,7 +31,7 @@ namespace pmgd {
   void split_string(const std::string &str, std::vector<std::string> &answer, std::string sep = " "){
     size_t sep_size = sep.size();
     size_t i_start = 0, i_end = 0;
-    for(size_t i_max = str.size(); i_end + sep_size < i_max;){
+    for(size_t i_max = str.size(); i_end + sep_size <= i_max;){
       if(sep == str.substr(i_end, sep_size)){
         answer.push_back(str.substr(i_start, i_end-i_start));
         i_end = (i_start = i_end + sep_size);

@@ -49,6 +49,12 @@ TEST(pmlib_string, split) {
   split_string_strip(txt, parts, "2");
   EXPECT_EQ(parts.at(0), "1");
   EXPECT_EQ(parts.at(1), "1");
+  parts.clear();
+
+  txt = "1->";
+  split_string_strip(txt, parts, "->");
+  EXPECT_EQ(parts.at(0), "1");
+  EXPECT_EQ(parts.at(1), "");
 }
 
 TEST(pmlib_string, replace) {

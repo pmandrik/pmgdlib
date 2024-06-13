@@ -1,5 +1,17 @@
 # pmgdlib
 
+## External
+### SDL
+https://github.com/libsdl-org/SDL/releases/tag/release-2.30.3
+```
+sudo apt-get install pkg-config cmake
+sudo apt-get install libasound2-dev
+sudo apt-get install libgl-dev libxext-dev libgl1-mesa-dev
+
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DSDL_OPENGL=ON
+```
+
 ## compiling tests
 ```
 # add meson

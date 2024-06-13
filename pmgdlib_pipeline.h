@@ -178,32 +178,7 @@ namespace pmgd {
 
   //! Pipeline
   //! "sla_back->sla_backbuff->sla_backloop->sla_fbuffer"
-  /// expect input as "A->B->C,D->E,E->C"
-  //       /// at first split into "A->B->C", "D->E", "E->C"
-  //       std::vector<std::string> value_cpp_parts;
-  //       pm::split_string_strip(relation, value_cpp_parts, ",");
-  //       if( not value_cpp_parts.size() ){
-  //         msg_err(__PFN__, "skip empty relation");
-  //         return;
-  //       } MSG_DEBUG(__PFN__, "find relation with N parts = ", value_cpp_parts.size());
-  //
-  //       /// then split "A->B->C" split into "A", "B", "C"
-  //       /// and add relations as AddRelation("A","B"), AddRelation("B","C")
-  //       for(auto value_cpp_part : value_cpp_parts){
-  //         std::vector<std::string> conn_parts;
-  //         pm::split_string_strip(value_cpp_part, conn_parts, "->");
-  //         if( conn_parts.size() < 2 ){
-  //           msg_err(__PFN__, "skip relation without \"->\" separated parts");
-  //           continue;
-  //         } MSG_DEBUG(__PFN__, "find relation with N in connection = ", conn_parts.size());
-  //
-  //         for(int i = 0; i < conn_parts.size()-1; ++i){
-  //           string src = conn_parts[i];
-  //           string tgt = conn_parts[i+1];
-  //           AddRelation( src , tgt );
-  //         }
-  //       }
-
+  //! expect input as "A->B->C,D->E,E->C"
   struct data_string_to_pipeline {
     std::set<std::string> nodes;
     std::vector<std::pair<std::string,std::string>> edges;

@@ -171,10 +171,10 @@ std::string chains_to_pipelines(std::string str){
   return join_string_ptrs(pl);
 }
 
-
 TEST(pmlib_pipeline, string_to_pipeline) {
   EXPECT_EQ(chains_to_pipelines("  A->B->C,  X->A, D->X    "), "DXABC");
-  EXPECT_EQ(chains_to_pipelines("MAPA->DANA(   XXX  )->CAMO-MILE,"), "MAPADANA(   XXX  )CAMO-MILE");
+  EXPECT_EQ(chains_to_pipelines("MAPA->DANA(   XXX  )->CAMO-MILE,XXX->MAPA"), "XXXMAPADANA(   XXX  )CAMO-MILE");
+
 }
 
 #endif

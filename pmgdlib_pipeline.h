@@ -5,7 +5,6 @@
 #ifndef PMGDLIB_PIPELINE_HH
 #define PMGDLIB_PIPELINE_HH 1
 
-#include "pmgdlib_core.h"
 #include "pmgdlib_string.h"
 
 namespace pmgd {

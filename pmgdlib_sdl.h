@@ -10,8 +10,8 @@
 
 namespace pmgd {
 
-  int KSTART = 4;
-  int KEND   = 231;
+  const int SDL_KSTART = 4;
+  const int SDL_KEND   = 231;
   enum key {
     A  =     SDL_SCANCODE_A ,
     B  =     SDL_SCANCODE_B ,
@@ -227,10 +227,82 @@ namespace pmgd {
     RGUI  =     SDL_SCANCODE_RGUI ,
   };
 
-};
+  //! Clocker is used to sleep between frames to get given FPS
+  class ClockerSDL {
+    public:
+    ClockerSDL(){}
+    ClockerSDL(int fps){ delay = 1000/fps; ntime = SDL_GetTicks(); };
+    float Tick(void){
+      if(delay > SDL_GetTicks() - ntime) SDL_Delay( delay - SDL_GetTicks() + ntime );
+      answer = SDL_GetTicks() - ntime;
+      ntime = SDL_GetTicks();
+      return 1./answer;
+    }
+    Uint32 delay, ntime, dtime, answer;
+  };
 
-#endif
+  //! Core is used for following:
+  //! - update Mouse & Keyboard items states
+  //! - call ClockerSDL to sleep between frames
+  class CoreSDL : public Core {
+    SDL_Event game_event;
+    Mouse * mouse, Keyboard * keyboard;
+    const Uint8 * kstate;
+    bool mouse_locker = false;
+    ClockerSDL clocker_sdl;
 
+    public:
+    SDL_Window * window;
+    SDL_GLContext glcontext;
+
+    CoreSDL(Mouse * mouse, Keyboard * keyboard, int fps) : Core(mouse, keyboard, fps) {
+      this->mouse = mouse;
+      this->keyboard = keyboard;
+      clocker_sdl = ClockerSDL(fps);
+    }
+
+    void CastMouseClick(const SDL_Event & game_event){
+      if(locker) return;
+      if( game_event.type == SDL_MOUSEBUTTONDOWN ){
+        if(game_event.button.button == SDL_BUTTON_LEFT  ) {mouse->left_down   = true; mouse->left_hold = true; }
+        if(game_event.button.button == SDL_BUTTON_MIDDLE) {mouse->middle_down = true; mouse->middle_hold = true; }
+        if(game_event.button.button == SDL_BUTTON_RIGHT ) {mouse->right_down  = true; mouse->right_hold = true; }
+      }
+      if( game_event.type == SDL_MOUSEBUTTONUP ){
+        if(game_event.button.button == SDL_BUTTON_LEFT  ) {mouse->left_up   = true; mouse->left_hold = false; }
+        if(game_event.button.button == SDL_BUTTON_MIDDLE) {mouse->middle_up = true; mouse->middle_hold = false; }
+        if(game_event.button.button == SDL_BUTTON_RIGHT ) {mouse->right_up  = true; mouse->right_hold = false; }
+      }
+      locker = true; // lock mouse for any other mouse events in this tick
+    }
+
+    void UpdateMouse(){
+      mouse_locker = false;
+      while(SDL_PollEvent(&game_event)){
+        if(game_event.type == SDL_MOUSEMOTION) mouse->SetXY( game_event.motion.x, game_event.motion.y );
+        else if(game_event.type == SDL_MOUSEBUTTONDOWN or game_event.type == SDL_MOUSEBUTTONUP) CastMouseClick( game_event );
+        else if(game_event.type == SDL_MOUSEWHEEL) mouse->SetWheel( game_event.wheel.y );
+      }
+    }
+
+    void UpdateKeyboard(){
+      kstate = SDL_GetKeyboardState(NULL);
+      for(int key = KSTART; key < KEND; key++){
+        keyboard->Update(key, kstate[key]);
+      }
+    }
+
+    void Tick(){
+      /// sleep a litle bit between frames
+      clocker_sdl.Tick();
+
+      /// check SDL events & update mouse state
+      UpdateMouse();
+
+      /// update keyboard state
+      UpdateKeyboard();
+    }
+  };
 
 };
 

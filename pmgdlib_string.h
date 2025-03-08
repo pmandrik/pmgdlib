@@ -5,6 +5,8 @@
 #ifndef PMGDLIB_STRING_HH
 #define PMGDLIB_STRING_HH 1
 
+#include "pmgdlib_defs.h"
+
 namespace pmgd {
 
   // General functions ============================================================================================================================

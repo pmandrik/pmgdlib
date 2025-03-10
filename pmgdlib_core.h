@@ -94,6 +94,42 @@ namespace pmgd {
   class KeyboardLogical {
   };
 
+  // drawing related items
+  struct TexTile {
+    /// TexTile store the info about position & size of part of image in Texture normalized to 1. space
+    TexTile() {}
+    TexTile(v2 tp, v2 ts) : tpos(tp), tsize(ts) {}
+    v2 tpos, tsize;
+
+    // TODO void Print(){ msg(__PFN__, pos, size, tpos, tsize); };
+  };
+
+  class TextureAtlas {
+    private:
+      std::unordered_map<std::string, TexTile> atlas;
+      v2 size;
+
+    public:
+      TexTile * GetTexTile(const std::string & key){
+        auto ptr = atlas.find(key);
+        if(ptr == atlas.end()) return nullptr;
+        return &(ptr->second);
+      }
+
+      void AddTexTile(const std::string & key, const v2 & tp, const v2 & ts){
+        if(GetTexTile(key)) return;
+        atlas[ key ] = TexTile(tp, ts);
+      }
+
+      string GenItemKey(int x, int y) const {
+        return "X" + std::to_string(x) + "Y" + std::to_string(y);
+      };
+
+      string GenItemKey(std::string name, int x, int y) const {
+        return name + "_" + std::to_string(x) + "_" + std::to_string(y);
+      };
+  };
+
 };
 
 #endif

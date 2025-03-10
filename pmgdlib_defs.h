@@ -15,6 +15,16 @@ namespace pmgd {
     PM_ERROR_500 = 500,
   };
 
+  enum image_format {
+    RGBA,
+
+  };
+
+  enum image_type {
+    UNSIGNED_INT,
+    FLOAT,
+  };
+
 };
 
 #endif

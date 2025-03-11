@@ -8,9 +8,9 @@
 #include "pmgdlib_defs.h"
 #include "pmgdlib_math.h"
 #include "pmgdlib_image.h"
+#include "pmgdlib_core.h"
 
-//#include <GL/gl.h>
-//#include <GL/glext.h>
+#include <GLES3/gl3.h>
 
 namespace pmgd {
 
@@ -93,7 +93,7 @@ namespace pmgd {
   }
 
   // ======= draw array of quads ====================================================================
-  void fill_verices_array(float * vertices, const int & index, v2 & pos, v2 size, const float & angle){
+  void fill_verices_array(float * vertices, const int & index, v2 & pos, v2 size, const float & angle, int stride=3){
     v2 perp = v2(-size.x, size.y);
     size = size.Rotated(angle);
     perp = perp.Rotated(angle);
@@ -102,38 +102,103 @@ namespace pmgd {
     vertices[index+1] = pos.y + size.y;
     vertices[index+2] = pos.z;
 
-    vertices[index+3] = pos.x - perp.x;
-    vertices[index+4] = pos.y + perp.y;
-    vertices[index+5] = pos.z;
+    vertices[index  +stride] = pos.x - perp.x;
+    vertices[index+1+stride] = pos.y + perp.y;
+    vertices[index+2+stride] = pos.z;
 
-    vertices[index+6] = pos.x + size.x;
-    vertices[index+7] = pos.y - size.y;
-    vertices[index+8] = pos.z;
+    vertices[index  +2*stride] = pos.x + size.x;
+    vertices[index+1+2*stride] = pos.y - size.y;
+    vertices[index+2+2*stride] = pos.z;
 
-    vertices[index+9]  = pos.x + perp.x;
-    vertices[index+10] = pos.y - perp.y;
-    vertices[index+11] = pos.z;
+    vertices[index  +3*stride] = pos.x + perp.x;
+    vertices[index+1+3*stride] = pos.y - perp.y;
+    vertices[index+2+3*stride] = pos.z;
   }
 
-  void draw_quad_array(float * vertices, int n_quads){
+  void fill_texture_array(float * vertices, const int & index, const v2 & tpos, const v2 & tsize, int stride=2){
+    vertices[index]   = tpos.x;
+    vertices[index+1] = tpos.y;
+
+    vertices[index  +stride] = tpos.x + tsize.x;
+    vertices[index+1+stride] = tpos.y;
+
+    vertices[index  +2*stride] = tpos.x + tsize.x;
+    vertices[index+1+2*stride] = tpos.y + tsize.y;
+
+    vertices[index  +3*stride] = tpos.x;
+    vertices[index+1+3*stride] = tpos.y + tsize.y;
+  }
+
+  int* fill_indexes_array(int n_quads){
     int n_indexes = n_quads*6;
-    int * indices = new int[n_indexes];
+    int *indices = new int[n_indexes];
 
     for(int i = 0; i < n_indexes; i++){
       int vi = i / 6;
       int qi = i % 6;
-      indices[i] = vi * 4 + qi - (qi>2) - 4*(qi==5);
+      indices[i] = vi*4 + qi - (qi>2) - 4*(qi==5);
       // printf("%d,", indices[i]);
       // if(qi == 5) printf("\n");
     }
-    // printf("\n");
+
+    return indices;
+  }
+
+  void draw_quad_array(float *vertices, int n_quads){
+    /// slow, for tests
+    int *indices = fill_indexes_array(n_quads);
 
     glEnableClientState(GL_VERTEX_ARRAY);
+    // TODO deprecate glVertexPointer
     glVertexPointer(3, GL_FLOAT, 0, vertices);
     glDrawElements(GL_TRIANGLES, n_quads*6, GL_UNSIGNED_INT, indices);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     delete[] indices;
+  }
+
+  void draw_textured_elements(int n_vertexes, float *data, int n_indexes, int *indexes){
+    /// slow, for testing
+    GLuint VAOId;
+    glGenVertexArrays(1, &VAOId);
+    glBindVertexArray(VAOId);
+
+    GLuint VBOId;
+    glGenBuffers(1, &VBOId);
+
+    // fill data
+    glBindBuffer(GL_ARRAY_BUFFER, VBOId);
+    glBufferData(GL_ARRAY_BUFFER, n_vertexes*5*sizeof(GLfloat), data, GL_STATIC_DRAW);
+
+    // specify position attribute
+    // index - 0
+    // size - 3 v3 pos(x, y, z)
+    // data type - GL_FLOAT
+    // normalized - false
+    // array groudp size = 3 pos + 2 texts
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+
+    // specify texture coordinate
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+
+    GLuint elementbuffer;
+    glGenBuffers(1, &elementbuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indexes*sizeof(GLint), indexes, GL_STATIC_DRAW);
+
+    glDrawElements(GL_TRIANGLES, n_indexes, GL_UNSIGNED_INT, (GLvoid*)0);
+
+    // tear down
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glDeleteBuffers(1, &VBOId);
+    glDeleteVertexArrays(1, &VAOId);
+
+    glDeleteBuffers(1, &elementbuffer);
+    glDeleteVertexArrays(1, &elementbuffer);
   }
 
   // ======= texture ====================================================================

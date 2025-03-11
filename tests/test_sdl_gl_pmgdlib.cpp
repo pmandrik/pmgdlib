@@ -88,6 +88,53 @@ class TestSuite : public testing::Test {
 
 TestContext* TestSuite::shared_resource_ = nullptr;
 
+TEST_F(TestSuite, draw_texture_atlas) {
+  GTEST_COUT << "See many texture images" << std::endl;
+  std::shared_ptr<Image> image = get_test_image();
+  TextureDrawer td(image);
+  TextureAtlas atlas;
+
+  int n_quads = 30;
+
+  float *data = new float[n_quads*4*5];
+  int *indexes = fill_indexes_array(n_quads);
+  float size_x = SCREEN_WIDTH / 20 / float(SCREEN_WIDTH);
+  float size_y = SCREEN_HEIGHT / 20 / float(SCREEN_HEIGHT);
+
+
+  for(int i = 0; i < n_quads; i ++){
+    float pos_x = -0.8 + 0.1 * i;
+    float pos_y = -0.8 + 0.1 * i;
+    v2 pos = v2(pos_x * cos(3.14 * i + 0.1*i), pos_y * sin(3.14 * i + (0.05+0.02*i)*i));
+    v2 size = v2(size_x, size_y);
+
+    fill_verices_array(data, i*20, pos, size, 0, 5);
+
+    float width = (rand() + 100) % 1000 / 1000.;
+    if(width > 1.) width = 0.9;
+    atlas.AddTexTile(std::to_string(i), v2(0,0), v2(width, width));
+
+    TexTile * tile = atlas.GetTexTile(std::to_string(i));
+    fill_texture_array(data, 20*i+3, tile->tpos, tile->tsize, 5);
+  }
+
+  for(int i = 0; i < 100; i++){
+    SDL_GL_SwapWindow(TestSuite::shared_resource_->window);
+    glClearColor(0., 0.5, 0.5, 1.);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // draw quads
+    td.Bind();
+    draw_textured_elements(n_quads*4, data, n_quads*6, indexes);
+    td.Unbind();
+
+    SDL_Delay(20);
+  }
+
+  delete[] indexes;
+}
+
 TEST_F(TestSuite, draw_texture) {
   GTEST_COUT << "See test image" << std::endl;
   std::shared_ptr<Image> image = get_test_image();
@@ -111,7 +158,7 @@ TEST_F(TestSuite, draw_texture) {
   }
 }
 
-TEST_F(TestSuite, draw_image) {
+TEST_F(TestSuite, draw_quads) {
   GTEST_COUT << "See lot of white squares" << std::endl;
   float vertices[10*12];
   for(int i = 0; i < 100; i++){

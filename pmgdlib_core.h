@@ -9,6 +9,7 @@
 
 namespace pmgd {
 
+  /*
   // mouse base class
   class Mouse {
     public:
@@ -93,6 +94,7 @@ namespace pmgd {
 
   class KeyboardLogical {
   };
+  */
 
   // drawing related items
   struct TexTile {
@@ -121,11 +123,11 @@ namespace pmgd {
         atlas[ key ] = TexTile(tp, ts);
       }
 
-      string GenItemKey(int x, int y) const {
+      std::string GenItemKey(int x, int y) const {
         return "X" + std::to_string(x) + "Y" + std::to_string(y);
       };
 
-      string GenItemKey(std::string name, int x, int y) const {
+      std::string GenItemKey(std::string name, int x, int y) const {
         return name + "_" + std::to_string(x) + "_" + std::to_string(y);
       };
   };

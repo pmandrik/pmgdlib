@@ -180,7 +180,7 @@ namespace pmgd {
     glEnableVertexAttribArray(0);
 
     // specify texture coordinate
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_TRUE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
 
     GLuint elementbuffer;
@@ -202,18 +202,6 @@ namespace pmgd {
   }
 
   // ======= texture ====================================================================
-  struct TextureDrawData {
-    v2 pos, size;
-    v2 tpos = v2(0,0), tsize = v2(1,1);
-    float angle = 0;
-    bool flip_x = false, flip_y = false;
-
-    TextureDrawData(v2 pos, v2 size){
-      this->pos = pos;
-      this->size = size;
-    }
-  };
-
   GLuint image_format_to_gl(int format){
     if(format == image_format::RGBA) return GL_RGBA;
     return GL_RGBA;
@@ -225,20 +213,29 @@ namespace pmgd {
     return GL_UNSIGNED_INT;
   };
 
-  class TextureDrawer {
+  class TextureGl : public Texture {
     /// thread unsafe
     private :
-      GLuint id, type, format, internalformat;
+      GLuint id = 0, type = 0, format = 0, internalformat = 0;
       bool is_binded = false;
 
     public:
-      TextureDrawer(std::shared_ptr<Image> img){
-        // MSG_INFO( __PFN__, "from Image", img ); TODO
-        glGenTextures(1, &id);
+      ~TextureGl() {
+        if(id)
+          glDeleteTextures(1, &id);
+      }
 
+      TextureGl(std::shared_ptr<Image> img){
         format = image_format_to_gl(img->format);
         type   = image_type_to_gl(img->type);
         internalformat = format;
+        // if(format){} TODO
+
+        // MSG_INFO( __PFN__, "from Image", img ); TODO
+        glGenTextures(1, &id);
+        if(not id){
+          // TODO
+        }
 
         Bind();
         glEnable(GL_TEXTURE_2D); // TODO use or not?
@@ -262,16 +259,121 @@ namespace pmgd {
       }
 
     public:
-      void Bind()  { if(    is_binded) return; glBindTexture(GL_TEXTURE_2D, id); is_binded = true;  }
-      void Unbind(){ if(not is_binded) return; glBindTexture(GL_TEXTURE_2D,  0); is_binded = false; }
+      virtual void Bind()  { if(    is_binded) return; glBindTexture(GL_TEXTURE_2D, id); is_binded = true;  }
+      virtual void Unbind(){ if(not is_binded) return; glBindTexture(GL_TEXTURE_2D,  0); is_binded = false; }
 
-      void Draw(const TextureDrawData & data){
+      virtual void Draw(const TextureDrawData & data){
         Bind();
         glEnable(GL_TEXTURE_2D);
         draw_textured_quad(data.pos, data.size, data.tpos, data.tsize, data.angle, data.flip_x, data.flip_y);
         Unbind();
       }
   };
+
+  // ======= texture ====================================================================
+  class ShaderGl : public Shader {
+    int Load(GLenum type, const std::string & text){
+      if(type != GL_VERTEX_SHADER and type != GL_FRAGMENT_SHADER){
+        // TODO
+        return PM_ERROR_INCORRECT_ARGUMENTS;
+      }
+
+      GLuint id = glCreateShader(type);
+
+      if(not id){
+        // TODO
+        //MSG_WARNING("Shader.load_from_string(): wrong shader type, bad return glCreateShader(),", type, id);
+        //gl_check_error("Shader.load_from_string():");
+        return PM_ERROR_GL;
+      }
+
+      const char * ctext = text.c_str();
+      glShaderSource(id, 1, &ctext, NULL);
+
+      GLint status;
+      glCompileShader(id);
+      glGetShaderiv(id, GL_COMPILE_STATUS, &status);
+
+      if(status == GL_FALSE){
+        // TODO
+        GLint lenght;
+        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &lenght);
+        GLchar * log = new GLchar[lenght];
+        glGetShaderInfoLog(id, lenght, NULL, log);
+        // MSG_ERROR("Shader.load_from_string(): shader compile error log :", log);
+        std::cout << log << std::endl;
+        delete [] log;
+      }
+      // else MSG_DEBUG("Shader.load_from_string(): shader compile ok", id);
+
+      if(type == GL_VERTEX_SHADER)   {
+        // if(shader_vert) MSG_WARNING("Shader.load_from_string(): override existed GL_VERTEX_SHADER shader", shader_name);
+        shader_vert = id;
+      }
+      if(type == GL_FRAGMENT_SHADER) {
+        // if(shader_frag) MSG_WARNING("Shader.load_from_string(): override existed GL_FRAGMENT_SHADER shader", shader_name);
+        shader_frag  = id;
+      }
+
+      return PM_SUCCESS;
+    }
+
+    public:
+    ~ShaderGl() override {
+      // TODO
+    }
+    virtual int LoadVert(const std::string & text){ return Load(GL_VERTEX_SHADER, text); };
+    virtual int LoadFrag(const std::string & text){ return Load(GL_FRAGMENT_SHADER, text); };
+
+    int CreateProgram(){
+      if(not shader_vert and not shader_frag){
+        // MSG_WARNING("Shader.CreateProgram():", shader_name, "do not any attached shaders");
+        return PM_ERROR_CLASS_ATTRIBUTES;
+      }
+
+      program_id = glCreateProgram();
+      if( shader_vert ) glAttachShader(program_id, shader_vert);
+      if( shader_frag ) glAttachShader(program_id, shader_frag);
+
+      GLint status;
+      glLinkProgram(program_id);
+      glGetProgramiv(program_id, GL_LINK_STATUS, &status);
+      if(status == GL_FALSE){
+        GLint lenght;
+        glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &lenght);
+        GLchar * log = new GLchar[lenght];
+        glGetShaderInfoLog(program_id, lenght, NULL, log);
+        // MSG_ERROR("Shader.CreateProgram():", shader_name, " program link error log :", log);
+        std::cout << log << std::endl;
+        delete [] log;
+      }
+      // else MSG_DEBUG("Shader.CreateProgram():", shader_name," shaders program link ok", program_id);
+
+      glDeleteShader( shader_vert );
+      glDeleteShader( shader_frag );
+
+      int n_uniforms;
+      glGetProgramiv(program_id, GL_ACTIVE_UNIFORMS, &n_uniforms); // glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count);
+      // MSG_DEBUG("Shader.CreateProgram():", shader_name," shaders program has", program_id);
+
+      return PM_SUCCESS;
+    }
+
+    // TODO Uniforms
+
+    virtual void Bind(){   glUseProgram( program_id ); };
+    virtual void Unbind(){ glUseProgram( 0 ); };
+
+    GLuint shader_vert = 0, shader_frag = 0;
+    GLuint program_id = 0;
+  };
+
+  void draw_textured_quad(TextureGl & text, const TextureDrawData & data){
+    text.Bind();
+    glEnable(GL_TEXTURE_2D);
+    draw_textured_quad(data.pos, data.size, data.tpos, data.tsize, data.angle, data.flip_x, data.flip_y);
+    text.Unbind();
+  }
 
 /*
 ['glMatrixMode', 'glLoadMatrixf', 'glLoadIdentity', 'glOrtho', '', 'glGetFloatv', 'glRotatef', 'glTranslatef', 'gluLookAt', 'gle){', '', 'gle);', '', '', 'gle,', 'glTexCoord2f', 'glEnableClientState', 'glVertexPointer', 'glTexCoordPointer', 'glEnable', 'glDrawArrays', 'gle=0,', 'glActiveTexture', 'glGenTextures', 'glBindTexture', 'glTexParameteri', 'glTexImage2D', 'glGenRenderbuffers', 'glBindRenderbuffer', 'glRenderbufferStorage', 'glGenFramebuffers', 'glBindFramebuffer', 'glFramebufferTexture2D', 'glFramebufferRenderbuffer', 'glCheckFramebufferStatus', 'glCheckFramebufferStatus"', 'glClearColor', '', '', 'gl_check_error', 'glGetError', 'glTexImage2D_err', 'gle', 'glCreateShader', 'glShaderSource', 'glCompileShader', 'glGetShaderiv', 'glGetShaderInfoLog', 'glCreateProgram', 'glAttachShader', 'glLinkProgram', 'glGetProgramiv', 'glDeleteShader', 'glGetActiveAttrib', 'glGetActiveUniform', 'gl_"', 'glUniform1i', 'glUniform1f', 'glGetUniformLocation', 'glUseProgram', 'glTexStorage2D', 'glTexSubImage2D', 'glGenerateMipmap']

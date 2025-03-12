@@ -90,8 +90,9 @@ TestContext* TestSuite::shared_resource_ = nullptr;
 
 TEST_F(TestSuite, draw_texture_atlas) {
   GTEST_COUT << "See many texture images" << std::endl;
+  GTEST_COUT << "texture setup..." << std::endl;
   std::shared_ptr<Image> image = get_test_image();
-  TextureDrawer td(image);
+  TextureGl td(image);
   TextureAtlas atlas;
 
   int n_quads = 30;
@@ -100,7 +101,6 @@ TEST_F(TestSuite, draw_texture_atlas) {
   int *indexes = fill_indexes_array(n_quads);
   float size_x = SCREEN_WIDTH / 20 / float(SCREEN_WIDTH);
   float size_y = SCREEN_HEIGHT / 20 / float(SCREEN_HEIGHT);
-
 
   for(int i = 0; i < n_quads; i ++){
     float pos_x = -0.8 + 0.1 * i;
@@ -112,24 +112,71 @@ TEST_F(TestSuite, draw_texture_atlas) {
 
     float width = (rand() + 100) % 1000 / 1000.;
     if(width > 1.) width = 0.9;
+    // width = 1;
     atlas.AddTexTile(std::to_string(i), v2(0,0), v2(width, width));
 
     TexTile * tile = atlas.GetTexTile(std::to_string(i));
     fill_texture_array(data, 20*i+3, tile->tpos, tile->tsize, 5);
   }
 
+  GTEST_COUT << "shader setup..." << std::endl;
+  std::string vert = R"(
+    #version 300 es
+    in vec3 in_Position;
+    in vec2 a_texCoord;
+    out vec2 v_texCoord;
+
+    void main(void) {
+      gl_Position = vec4(in_Position, 1.0);
+      v_texCoord = a_texCoord;
+    }
+  )";
+
+  std::string frag = R"(
+      #version 300 es
+      precision mediump float;
+      in vec2 v_texCoord;
+      uniform sampler2D text_0;
+      out vec4 fragColor;
+      void main(){
+        fragColor = texture2D(text_0, v_texCoord);
+      }
+    )";
+
+  ShaderGl shader;
+  shader.LoadVert(vert);
+  shader.LoadFrag(frag);
+  shader.CreateProgram();
+
+  GTEST_COUT << "loop..." << std::endl;
   for(int i = 0; i < 100; i++){
     SDL_GL_SwapWindow(TestSuite::shared_resource_->window);
     glClearColor(0., 0.5, 0.5, 1.);
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
+    for(int qi = 0; qi < n_quads; qi ++){
+      v2 pos(0.8, 0);
+      pos = pos.Rotated(360 / n_quads * qi + 0.2*i);
+      v2 size = v2(size_x, size_y);
+      fill_verices_array(data, qi*20, pos, size, 0, 5);
+      int index = qi * (1 - ((i % n_quads) == qi));
+      TexTile * tile = atlas.GetTexTile(std::to_string(index));
+      fill_texture_array(data, 20*qi+3, tile->tpos, tile->tsize, 5);
+    }
+
     // draw quads
     td.Bind();
+    shader.Bind();
+    GLint position = glGetUniformLocation(shader.program_id, "text_0");
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(position, 0);
+
     draw_textured_elements(n_quads*4, data, n_quads*6, indexes);
+    shader.Unbind();
     td.Unbind();
 
-    SDL_Delay(20);
+    SDL_Delay(30);
   }
 
   delete[] indexes;
@@ -138,7 +185,7 @@ TEST_F(TestSuite, draw_texture_atlas) {
 TEST_F(TestSuite, draw_texture) {
   GTEST_COUT << "See test image" << std::endl;
   std::shared_ptr<Image> image = get_test_image();
-  TextureDrawer td(image);
+  TextureGl td(image);
 
   float size_x = SCREEN_WIDTH / 2 / float(SCREEN_WIDTH);
   float size_y = SCREEN_HEIGHT / 2 / float(SCREEN_HEIGHT);
@@ -152,7 +199,7 @@ TEST_F(TestSuite, draw_texture) {
 
     // draw quad
     data.angle = 316*i/100;
-    td.Draw(data);
+    draw_textured_quad(td, data);
 
     SDL_Delay(20);
   }

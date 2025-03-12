@@ -13,6 +13,9 @@ namespace pmgd {
     PM_ERROR_DUPLICATE = 1,
     PM_ERROR_404 = 404,
     PM_ERROR_500 = 500,
+    PM_ERROR_INCORRECT_ARGUMENTS,
+    PM_ERROR_CLASS_ATTRIBUTES,
+    PM_ERROR_GL
   };
 
   enum image_format {

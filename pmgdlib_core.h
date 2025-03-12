@@ -97,6 +97,14 @@ namespace pmgd {
   */
 
   // drawing related items
+  class Texture {
+    /// base abstract texture class
+    public:
+    virtual void Bind()   = 0;
+    virtual void Unbind() = 0;
+    virtual ~Texture() {};
+  };
+
   struct TexTile {
     /// TexTile store the info about position & size of part of image in Texture normalized to 1. space
     TexTile() {}
@@ -104,6 +112,18 @@ namespace pmgd {
     v2 tpos, tsize;
 
     // TODO void Print(){ msg(__PFN__, pos, size, tpos, tsize); };
+  };
+
+  struct TextureDrawData {
+    v2 pos, size;
+    v2 tpos = v2(0,0), tsize = v2(1,1);
+    float angle = 0;
+    bool flip_x = false, flip_y = false;
+
+    TextureDrawData(v2 pos, v2 size){
+      this->pos = pos;
+      this->size = size;
+    }
   };
 
   class TextureAtlas {
@@ -130,6 +150,14 @@ namespace pmgd {
       std::string GenItemKey(std::string name, int x, int y) const {
         return name + "_" + std::to_string(x) + "_" + std::to_string(y);
       };
+  };
+
+  class Shader {
+    public:
+    virtual int LoadVert(const std::string & text) = 0;
+    virtual int LoadFrag(const std::string & text) = 0;
+    virtual int CreateProgram() = 0;
+    virtual ~Shader(){};
   };
 
 };

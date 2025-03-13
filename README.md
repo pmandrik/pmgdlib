@@ -17,6 +17,10 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DSDL_OPENGL=ON -DSDL_VULKAN=ON
 ```
 
+### spdlog
+https://github.com/gabime/spdlog/releases/tag/v1.15.1
+Header-only implementation was found to be too heavy leading to unacceptable compile time.
+
 ## compiling tests
 ```
 # add meson

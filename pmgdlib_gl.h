@@ -231,7 +231,6 @@ namespace pmgd {
         internalformat = format;
         // if(format){} TODO
 
-        // MSG_INFO( __PFN__, "from Image", img ); TODO
         glGenTextures(1, &id);
         if(not id){
           // TODO

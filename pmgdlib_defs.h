@@ -18,14 +18,19 @@ namespace pmgd {
     PM_ERROR_GL
   };
 
-  enum image_format {
-    RGBA,
-
+  namespace image_format {
+    enum  {
+      UNDEFINED = -1,
+      RGBA,
+    };
   };
 
-  enum image_type {
-    UNSIGNED_INT,
-    FLOAT,
+  namespace image_type {
+    enum  {
+      UNDEFINED = -1,
+      UNSIGNED_INT,
+      FLOAT,
+    };
   };
 
 };

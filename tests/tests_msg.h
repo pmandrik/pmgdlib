@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 using namespace pmgd;
+using namespace std;
 
 std::streambuf *old, *olderr;
 std::stringstream buffer;
@@ -59,7 +60,7 @@ TEST(msg_test, def) {
   EXPECT_TRUE(check_buffer(txt + "\n"));
 }
 
-void test_verbose_level(std::string txt, int verbose_lvl, int level, const char *prefix){
+void test_verbose_level(std::string txt, int verbose_lvl, int level, std::string prefix){
   txt = std::string(prefix) + " " + txt;
   if(verbose_lvl >= level) EXPECT_TRUE(check_buffer(txt));
   else EXPECT_TRUE(check_buffer_empty());
@@ -72,42 +73,43 @@ TEST(msg_test, verbose_level) {
   const char info_prefix[] = MSG_INFO_PREFIX;
   const char debug_prefix[] = MSG_DEBUG_PREFIX;
   const char verbose_prefix[] = MSG_VERBOSE_PREFIX;
+  std::string header;
 
   std::string txt = "sample txt";
   for(int verbose_lvl = verbose::SILENCE; verbose_lvl <= verbose::VERBOSE; verbose_lvl++){
     clear_buffer();
     stream_redirection_on();
-    msg_error(txt);
+    msg_error(txt); header = " " + msg_trace();
     stream_redirection_off();
-    test_verbose_level(txt, verbose_lvl, verbose::ERROR, error_prefix);
+    test_verbose_level(txt, verbose_lvl, verbose::ERROR, error_prefix + header);
 
     txt += "1";
     clear_buffer();
     stream_redirection_on();
-    msg_warning(txt);
+    msg_warning(txt); header = " " + msg_trace();
     stream_redirection_off();
-    test_verbose_level(txt, verbose_lvl, verbose::WARNING, warn_prefix);
+    test_verbose_level(txt, verbose_lvl, verbose::WARNING, warn_prefix + header);
 
     txt += "2";
     clear_buffer();
     stream_redirection_on();
-    msg_info(txt);
+    msg_info(txt); header = " " + msg_trace();
     stream_redirection_off();
-    test_verbose_level(txt, verbose_lvl, verbose::INFO, info_prefix);
+    test_verbose_level(txt, verbose_lvl, verbose::INFO, info_prefix + header);
 
     txt += "3";
     clear_buffer();
     stream_redirection_on();
-    msg_debug(txt);
+    msg_debug(txt); header = " " + msg_trace();
     stream_redirection_off();
-    test_verbose_level(txt, verbose_lvl, verbose::DEBUG, debug_prefix);
+    test_verbose_level(txt, verbose_lvl, verbose::DEBUG, debug_prefix + header);
 
     txt += "4";
     clear_buffer();
     stream_redirection_on();
-    msg_verbose(txt);
+    msg_verbose(txt); header = " " + msg_trace();
     stream_redirection_off();
-    test_verbose_level(txt, verbose_lvl, verbose::VERBOSE, verbose_prefix);
+    test_verbose_level(txt, verbose_lvl, verbose::VERBOSE, verbose_prefix + header);
   }
 }
 

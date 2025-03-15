@@ -11,6 +11,29 @@ const int SCREEN_HEIGHT = 600;
 
 #define GTEST_COUT std::cerr << "[          ] [ INFO ]"
 
+const std::string vert = R"(
+    #version 300 es
+    in vec3 in_Position;
+    in vec2 a_texCoord;
+    out vec2 v_texCoord;
+
+    void main(void) {
+      gl_Position = vec4(in_Position, 1.0);
+      v_texCoord = a_texCoord;
+    }
+  )";
+
+const std::string frag = R"(
+      #version 300 es
+      precision mediump float;
+      in vec2 v_texCoord;
+      uniform sampler2D text_0;
+      out vec4 fragColor;
+      void main(){
+        fragColor = texture2D(text_0, v_texCoord);
+      }
+    )";
+
 class TestContext {
   public:
   SDL_Window * window;
@@ -120,29 +143,6 @@ TEST_F(TestSuite, draw_texture_atlas) {
   }
 
   GTEST_COUT << "shader setup..." << std::endl;
-  std::string vert = R"(
-    #version 300 es
-    in vec3 in_Position;
-    in vec2 a_texCoord;
-    out vec2 v_texCoord;
-
-    void main(void) {
-      gl_Position = vec4(in_Position, 1.0);
-      v_texCoord = a_texCoord;
-    }
-  )";
-
-  std::string frag = R"(
-      #version 300 es
-      precision mediump float;
-      in vec2 v_texCoord;
-      uniform sampler2D text_0;
-      out vec4 fragColor;
-      void main(){
-        fragColor = texture2D(text_0, v_texCoord);
-      }
-    )";
-
   ShaderGl shader;
   shader.LoadVert(vert);
   shader.LoadFrag(frag);
@@ -232,6 +232,23 @@ TEST_F(TestSuite, draw_quads) {
 
     SDL_Delay(20);
   }
+}
+
+TEST_F(TestSuite, invalid_parameters) {
+  std::shared_ptr<Image> image = get_test_image();
+  image->format = image_format::UNDEFINED - 1;
+  TextureGl td1(image);
+  EXPECT_EQ(td1.GetId(), 0);
+
+  image = get_test_image();
+  image->type = image_type::UNDEFINED - 1;
+  TextureGl td2(image);
+  EXPECT_EQ(td2.GetId(), 0);
+
+  ShaderGl shader;
+  EXPECT_EQ(shader.Load(2 + GL_VERTEX_SHADER + GL_FRAGMENT_SHADER, vert), PM_ERROR_INCORRECT_ARGUMENTS);
+  EXPECT_EQ(shader.Load(3 + GL_VERTEX_SHADER + GL_FRAGMENT_SHADER, frag), PM_ERROR_INCORRECT_ARGUMENTS);
+  EXPECT_EQ(shader.CreateProgram(), PM_ERROR_CLASS_ATTRIBUTES);
 }
 
 int main(int argc, char **argv) {

@@ -6,6 +6,7 @@
 #define PMGDLIB_CORE_HH 1
 
 #include "pmgdlib_defs.h"
+#include "pmgdlib_msg.h"
 
 namespace pmgd {
 
@@ -97,7 +98,7 @@ namespace pmgd {
   */
 
   // drawing related items
-  class Texture {
+  class Texture : public BaseMsg {
     /// base abstract texture class
     public:
     virtual void Bind()   = 0;
@@ -152,7 +153,7 @@ namespace pmgd {
       };
   };
 
-  class Shader {
+  class Shader : public BaseMsg {
     public:
     virtual int LoadVert(const std::string & text) = 0;
     virtual int LoadFrag(const std::string & text) = 0;

@@ -26,12 +26,17 @@ namespace pmgd {
   /// glTexParameteri
   /// glGetError
 
-  void gl_check_error(const char * fname){
+  std::string gl_get_errors_msg(){
     GLenum code;
+    std::string answer;
+    int max_depths = 100;
     while((code = glGetError()) != GL_NO_ERROR){
-      // msg_err(fname, " error: ", code); TODO
-      std::cerr << "Error: " << code << std::endl;
+      answer += "glGetError():" + std::to_string(code) + "\n";
+      if(max_depths-- < 0){
+        answer += "glGetError(): max depths reached\n";
+      }
     }
+    return answer;
   }
 
   void GLAPIENTRY
@@ -204,13 +209,13 @@ namespace pmgd {
   // ======= texture ====================================================================
   GLuint image_format_to_gl(int format){
     if(format == image_format::RGBA) return GL_RGBA;
-    return GL_RGBA;
+    return image_format::UNDEFINED;
   };
 
   GLuint image_type_to_gl(int type){
     if(type == image_type::UNSIGNED_INT) return GL_UNSIGNED_INT;
     if(type == image_type::FLOAT) return GL_FLOAT;
-    return GL_UNSIGNED_INT;
+    return image_type::UNDEFINED;
   };
 
   class TextureGl : public Texture {
@@ -225,15 +230,26 @@ namespace pmgd {
           glDeleteTextures(1, &id);
       }
 
+      GLuint GetId() const { return id; }
+
       TextureGl(std::shared_ptr<Image> img){
         format = image_format_to_gl(img->format);
         type   = image_type_to_gl(img->type);
         internalformat = format;
-        // if(format){} TODO
+        if(format == (GLuint)image_format::UNDEFINED){
+          msg_warning("invalid image format", img->format);
+          return;
+        }
+        if(type == (GLuint)image_type::UNDEFINED){
+          msg_warning("invalid image type", img->type);
+          return;
+        }
 
         glGenTextures(1, &id);
         if(not id){
-          // TODO
+          msg_warning("glGenTextures failed");
+          msg_warning(gl_get_errors_msg());
+          return;
         }
 
         Bind();
@@ -254,6 +270,14 @@ namespace pmgd {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        std::string any_errors = gl_get_errors_msg();
+        if(any_errors.size()){
+          msg_warning("GL texture setup failed");
+          msg_warning(gl_get_errors_msg());
+          return;
+        }
+
         Unbind();
       }
 
@@ -271,20 +295,23 @@ namespace pmgd {
 
   // ======= texture ====================================================================
   class ShaderGl : public Shader {
+    public:
     int Load(GLenum type, const std::string & text){
+      msg_debug("load shader ...");
+      msg_verbose(text);
       if(type != GL_VERTEX_SHADER and type != GL_FRAGMENT_SHADER){
-        // TODO
+        msg_warning("invalid shader type argument", type, " valid=[", GL_VERTEX_SHADER, ",", GL_FRAGMENT_SHADER, "]");
         return PM_ERROR_INCORRECT_ARGUMENTS;
       }
 
       GLuint id = glCreateShader(type);
 
       if(not id){
-        // TODO
-        //MSG_WARNING("Shader.load_from_string(): wrong shader type, bad return glCreateShader(),", type, id);
-        //gl_check_error("Shader.load_from_string():");
+        msg_warning("glCreateShader failed");
+        msg_warning(gl_get_errors_msg());
         return PM_ERROR_GL;
       }
+      msg_debug("glCreateShader ok", id);
 
       const char * ctext = text.c_str();
       glShaderSource(id, 1, &ctext, NULL);
@@ -294,43 +321,50 @@ namespace pmgd {
       glGetShaderiv(id, GL_COMPILE_STATUS, &status);
 
       if(status == GL_FALSE){
-        // TODO
+        msg_warning("Shader compile error");
         GLint lenght;
         glGetShaderiv(id, GL_INFO_LOG_LENGTH, &lenght);
         GLchar * log = new GLchar[lenght];
         glGetShaderInfoLog(id, lenght, NULL, log);
-        // MSG_ERROR("Shader.load_from_string(): shader compile error log :", log);
-        std::cout << log << std::endl;
+        msg_warning(log);
         delete [] log;
+        return PM_ERROR_GL;
       }
-      // else MSG_DEBUG("Shader.load_from_string(): shader compile ok", id);
+      msg_debug("glCompileShader ok", id);
 
       if(type == GL_VERTEX_SHADER)   {
-        // if(shader_vert) MSG_WARNING("Shader.load_from_string(): override existed GL_VERTEX_SHADER shader", shader_name);
+        if(shader_vert) msg_warning("override existed GL_VERTEX_SHADER shader");
         shader_vert = id;
       }
       if(type == GL_FRAGMENT_SHADER) {
-        // if(shader_frag) MSG_WARNING("Shader.load_from_string(): override existed GL_FRAGMENT_SHADER shader", shader_name);
+        if(shader_frag) msg_warning("override existed GL_FRAGMENT_SHADER shader");
         shader_frag  = id;
       }
 
+      msg_debug("load shader ... ok");
       return PM_SUCCESS;
     }
 
-    public:
     ~ShaderGl() override {
+      msg_debug("shader destructor call");
       // TODO
     }
     virtual int LoadVert(const std::string & text){ return Load(GL_VERTEX_SHADER, text); };
     virtual int LoadFrag(const std::string & text){ return Load(GL_FRAGMENT_SHADER, text); };
 
     int CreateProgram(){
+      msg_debug("load shader programm ...");
       if(not shader_vert and not shader_frag){
-        // MSG_WARNING("Shader.CreateProgram():", shader_name, "do not any attached shaders");
+        msg_warning("no loaded shaders");
         return PM_ERROR_CLASS_ATTRIBUTES;
       }
 
       program_id = glCreateProgram();
+      if(not program_id){
+        msg_warning("glCreateProgram failed");
+        msg_warning(gl_get_errors_msg());
+        return PM_ERROR_GL;
+      }
       if( shader_vert ) glAttachShader(program_id, shader_vert);
       if( shader_frag ) glAttachShader(program_id, shader_frag);
 
@@ -338,27 +372,28 @@ namespace pmgd {
       glLinkProgram(program_id);
       glGetProgramiv(program_id, GL_LINK_STATUS, &status);
       if(status == GL_FALSE){
+        msg_warning("program link error");
         GLint lenght;
         glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &lenght);
         GLchar * log = new GLchar[lenght];
         glGetShaderInfoLog(program_id, lenght, NULL, log);
-        // MSG_ERROR("Shader.CreateProgram():", shader_name, " program link error log :", log);
-        std::cout << log << std::endl;
+        msg_warning(log);
         delete [] log;
       }
-      // else MSG_DEBUG("Shader.CreateProgram():", shader_name," shaders program link ok", program_id);
+      msg_debug("program link ok");
 
+      // https://stackoverflow.com/questions/8829288/may-i-call-gldeleteshader-after-calling-gllinkprogram
       glDeleteShader( shader_vert );
       glDeleteShader( shader_frag );
 
+      // TODO Uniforms
       int n_uniforms;
       glGetProgramiv(program_id, GL_ACTIVE_UNIFORMS, &n_uniforms); // glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count);
       // MSG_DEBUG("Shader.CreateProgram():", shader_name," shaders program has", program_id);
 
+      msg_debug("load shader programm ... ok");
       return PM_SUCCESS;
     }
-
-    // TODO Uniforms
 
     virtual void Bind(){   glUseProgram( program_id ); };
     virtual void Unbind(){ glUseProgram( 0 ); };
@@ -372,7 +407,7 @@ namespace pmgd {
     glEnable(GL_TEXTURE_2D);
     draw_textured_quad(data.pos, data.size, data.tpos, data.tsize, data.angle, data.flip_x, data.flip_y);
     text.Unbind();
-  }
+  };
 
 /*
 ['glMatrixMode', 'glLoadMatrixf', 'glLoadIdentity', 'glOrtho', '', 'glGetFloatv', 'glRotatef', 'glTranslatef', 'gluLookAt', 'gle){', '', 'gle);', '', '', 'gle,', 'glTexCoord2f', 'glEnableClientState', 'glVertexPointer', 'glTexCoordPointer', 'glEnable', 'glDrawArrays', 'gle=0,', 'glActiveTexture', 'glGenTextures', 'glBindTexture', 'glTexParameteri', 'glTexImage2D', 'glGenRenderbuffers', 'glBindRenderbuffer', 'glRenderbufferStorage', 'glGenFramebuffers', 'glBindFramebuffer', 'glFramebufferTexture2D', 'glFramebufferRenderbuffer', 'glCheckFramebufferStatus', 'glCheckFramebufferStatus"', 'glClearColor', '', '', 'gl_check_error', 'glGetError', 'glTexImage2D_err', 'gle', 'glCreateShader', 'glShaderSource', 'glCompileShader', 'glGetShaderiv', 'glGetShaderInfoLog', 'glCreateProgram', 'glAttachShader', 'glLinkProgram', 'glGetProgramiv', 'glDeleteShader', 'glGetActiveAttrib', 'glGetActiveUniform', 'gl_"', 'glUniform1i', 'glUniform1f', 'glGetUniformLocation', 'glUseProgram', 'glTexStorage2D', 'glTexSubImage2D', 'glGenerateMipmap']

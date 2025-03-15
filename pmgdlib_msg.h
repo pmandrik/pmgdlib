@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <source_location>
 
 namespace pmgd {
   enum verbose{
@@ -23,7 +24,8 @@ namespace pmgd {
     return def_verbose_lvl;
   };
 
-  class MsgBase {
+  class BaseMsg {
+    public:
     int verbose_lvl = msg_verbose_lvl();
   };
 
@@ -41,14 +43,18 @@ namespace pmgd {
   #define MSG_DEBUG_PREFIX MSG_COLOR_BLUE "DEBUG:" MSG_COLOR_RESET
   #define MSG_VERBOSE_PREFIX MSG_COLOR_CYAN "VERBOSE:" MSG_COLOR_RESET
 
-  #define msg_error(...)   if(verbose_lvl >= pmgd::verbose::ERROR)   pmgd::msg_err(MSG_ERROR_PREFIX, __VA_ARGS__)
-  #define msg_warning(...) if(verbose_lvl >= pmgd::verbose::WARNING) pmgd::msg_err(MSG_WARNING_PREFIX, __VA_ARGS__)
-  #define msg_info(...)    if(verbose_lvl >= pmgd::verbose::INFO)    pmgd::msg(MSG_INFO_PREFIX, __VA_ARGS__)
-  #define msg_debug(...)   if(verbose_lvl >= pmgd::verbose::DEBUG)   pmgd::msg(MSG_DEBUG_PREFIX, __VA_ARGS__)
-  #define msg_verbose(...) if(verbose_lvl >= pmgd::verbose::VERBOSE) pmgd::msg(MSG_VERBOSE_PREFIX, __VA_ARGS__)
+  std::string msg_trace(const std::source_location& location = std::source_location::current()){
+    return std::string(location.file_name()) + ":" + std::to_string(location.line()) + ":" + location.function_name() + ":";
+  }
+
+  #define msg_error(...)   if(verbose_lvl >= pmgd::verbose::ERROR)   pmgd::msg_err(MSG_ERROR_PREFIX, msg_trace(), __VA_ARGS__)
+  #define msg_warning(...) if(verbose_lvl >= pmgd::verbose::WARNING) pmgd::msg_err(MSG_WARNING_PREFIX, msg_trace(), __VA_ARGS__)
+  #define msg_info(...)    if(verbose_lvl >= pmgd::verbose::INFO)    pmgd::msg(MSG_INFO_PREFIX, msg_trace(), __VA_ARGS__)
+  #define msg_debug(...)   if(verbose_lvl >= pmgd::verbose::DEBUG)   pmgd::msg(MSG_DEBUG_PREFIX, msg_trace(), __VA_ARGS__)
+  #define msg_verbose(...) if(verbose_lvl >= pmgd::verbose::VERBOSE) pmgd::msg(MSG_VERBOSE_PREFIX, msg_trace(), __VA_ARGS__)
 
   // ======= msg ====================================================================
-  void msg(){ std::cout << "\n" << std::endl; };
+  void msg(){ std::cout << std::endl; };
   template<typename T> void msg(T t) { std::cout << t << std::endl; }
   template<typename T, typename... Args> void msg(T t, Args... args){
     std::cout << t << " ";
@@ -56,13 +62,12 @@ namespace pmgd {
   }
 
   void msg_nll(){};
-  template<typename T> void msg_nll(T t) { std::cout << t << " "; }
+  template<typename T> void msg_nll(T t) { std::cout << t; }
   template<typename T, typename... Args> void msg_nll(T t, Args... args){
     std::cout << t << " ";
     msg_nll(args...);
   }
 
-  // ======= msg_sep ====================================================================
   template<typename T> void msg_sep(const std::string & separator, const std::string & last_symbol, T t){ std::cout << t << last_symbol; };
   template<typename T, typename... Args> void msg_sep(const std::string & separator, const std::string & last_symbol, T t, Args... args){
     std::cout << t << separator;
@@ -70,18 +75,24 @@ namespace pmgd {
   }
 
   // ======= msg_err ====================================================================
-  void msg_err(){ std::cerr << "\n" << std::endl; };
+  void msg_err(){ std::cerr << std::endl; };
   template<typename T> void msg_err(const T & t) { std::cerr << t << std::endl; }
   template<typename T, typename... Args> void msg_err(const T & t, Args... args){
     std::cerr << t << " ";
     msg_err(args...);
   }
 
-  void msg_err_nll(){ std::cerr << "\n" << std::endl; };
+  void msg_err_nll(){};
   template<typename T> void msg_err_nll(T t) { std::cerr << t << std::endl; }
   template<typename T, typename... Args> void msg_err_nll(T t, Args... args){
     std::cerr << t << " ";
     msg_err_nll(args...);
+  }
+
+  template<typename T> void msg_sep_err(const std::string & separator, const std::string & last_symbol, T t){ std::cerr << t << last_symbol; };
+  template<typename T, typename... Args> void msg_sep_err(const std::string & separator, const std::string & last_symbol, T t, Args... args){
+    std::cerr << t << separator;
+    msg_sep_err(separator, last_symbol, args...);
   }
 };
 

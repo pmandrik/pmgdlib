@@ -25,6 +25,10 @@ namespace pmgd {
     };
   };
 
+  namespace sys {
+    static const float PERSPECTIVE_EDGE = -1000000;
+  };
+
   namespace image_type {
     enum  {
       UNDEFINED = -1,

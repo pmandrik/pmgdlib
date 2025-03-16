@@ -409,6 +409,178 @@ namespace pmgd {
     text.Unbind();
   };
 
+  class QuadsArrayGl : public QuadsArray {
+    float* data;
+    unsigned int array_size, array_size10;
+    int* indexes;
+    unsigned int n_indexes;
+
+    static const int quad_vertexes = 4; // 4 vertexes per quad :D
+    static const int vertex_attributes = 5; // 5 attributes per vertex :D
+    static const int quad_aray_size = quad_vertexes * vertex_attributes;
+
+    GLuint data_buffer_id, index_buffer_id;
+
+    virtual unsigned int IndexToId(unsigned int quad_index){ return quad_index*quad_aray_size; };
+    virtual unsigned int IdToIndex(unsigned int id){ return id/quad_aray_size; };
+    virtual bool IsFreeIndex(unsigned int quad_index){
+      return data[quad_index*quad_aray_size+2] <= sys::PERSPECTIVE_EDGE;
+    };
+
+    public:
+    QuadsArrayGl(unsigned int max_quads_number) : QuadsArray(max_quads_number) {
+      msg_debug("constructor call");
+      array_size = quad_aray_size * max_quads_number;
+      array_size10 = array_size/10;
+      data = new float[array_size];
+      Clean();
+
+      n_indexes = 6*max_quads_number;
+      indexes = fill_indexes_array(max_quads_number);
+
+      msg_debug("generate buffers");
+      glGenBuffers(1, &data_buffer_id);
+      if(not data_buffer_id){
+        msg_warning("glGenBuffers data buffer failed");
+        msg_warning(gl_get_errors_msg());
+        return;
+      }
+
+      glGenBuffers(1, &index_buffer_id);
+      if(not index_buffer_id){
+        msg_warning("glGenBuffers index buffer failed");
+        msg_warning(gl_get_errors_msg());
+        return;
+      }
+
+      msg_debug("setup buffers data");
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_id);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indexes*sizeof(GLint), indexes, GL_STATIC_DRAW);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    virtual ~QuadsArrayGl(){
+      msg_debug("destructor call");
+      delete[] data;
+      delete[] indexes;
+
+      if(data_buffer_id){
+        glDeleteBuffers(1, &data_buffer_id);
+        glDeleteVertexArrays(1, &data_buffer_id);
+      }
+
+      if(index_buffer_id){
+        glDeleteBuffers(1, &index_buffer_id);
+        glDeleteVertexArrays(1, &index_buffer_id);
+      }
+    }
+
+    virtual unsigned int Add(TextureDrawData * quad_data) {
+      unsigned int free_index = FindFreePosition();
+      unsigned int id = IndexToId(free_index);
+      Set(id, quad_data);
+      return id;
+    }
+
+    virtual void Set(const unsigned int & id, TextureDrawData * quad_data) {
+      const v2 & pos = quad_data->pos; v2 size = quad_data->size;
+      const v2 & tpos = quad_data->tpos; const v2 & tsize = quad_data->tsize;
+      const float & angle = quad_data->angle;
+      if(quad_data->flip_x) size.x *= -1;
+      if(quad_data->flip_y) size.y *= -1;
+
+      v2 perp = v2(-size.x, size.y);
+      if(angle){
+        size = size.Rotated(angle);
+        perp = perp.Rotated(angle);
+      }
+
+      data[id+0]  = pos.x - size.x; data[id+3]  = tpos.x;
+      data[id+1]  = pos.y + size.y; data[id+4]  = tpos.y;
+      data[id+2]  = pos.z;
+
+      data[id+5]  = pos.x - perp.x; data[id+8]  = tpos.x + tsize.x;
+      data[id+6]  = pos.y + perp.y; data[id+9]  = tpos.y;
+      data[id+7]  = pos.z;
+
+      data[id+10] = pos.x + size.x; data[id+13] = tpos.x + tsize.x;
+      data[id+11] = pos.y - size.y; data[id+14] = tpos.y + tsize.y;
+      data[id+12] = pos.z;
+
+      data[id+15] = pos.x + perp.x; data[id+18] = tpos.x;
+      data[id+16] = pos.y - perp.y; data[id+19] = tpos.y + tsize.y;
+      data[id+17] = pos.z;
+    };
+
+    virtual void SetPos(const unsigned int & id, TextureDrawData * quad_data){
+      const v2 & pos = quad_data->pos; v2 size = quad_data->size;
+      data[id+0]  = pos.x - size.x;
+      data[id+1]  = pos.y + size.y;
+
+      data[id+5]  = pos.x + size.x;
+      data[id+6]  = pos.y + size.y;
+
+      data[id+10] = pos.x + size.x;
+      data[id+11] = pos.y - size.y;
+
+      data[id+15] = pos.x - size.x;
+      data[id+16] = pos.y - size.y;
+    };
+
+    virtual void SetText(const unsigned int & id, TextureDrawData * quad_data) {
+      const v2 & tpos = quad_data->tpos; const v2 & tsize = quad_data->tsize;
+      data[id+3]  = tpos.x;
+      data[id+4]  = tpos.y;
+
+      data[id+8]  = tpos.x + tsize.x;
+      data[id+9]  = tpos.y;
+
+      data[id+13] = tpos.x + tsize.x;
+      data[id+14] = tpos.y + tsize.y;
+
+      data[id+18] = tpos.x;
+      data[id+19] = tpos.y + tsize.y;
+    }
+
+    virtual void Move(const unsigned int & id, const v2 & shift) {
+      data[id+0]  += shift.x;
+      data[id+1]  += shift.y;
+
+      data[id+5]  += shift.x;
+      data[id+6]  += shift.y;
+
+      data[id+10] += shift.x;
+      data[id+11] += shift.y;
+
+      data[id+15] += shift.x;
+      data[id+16] += shift.y;
+    }
+
+    virtual void Clean(){
+      for(unsigned int id = 0; id < array_size; id+=quad_aray_size){
+        data[id+2]  = sys::PERSPECTIVE_EDGE;
+        data[id+7]  = sys::PERSPECTIVE_EDGE;
+        data[id+12] = sys::PERSPECTIVE_EDGE;
+        data[id+17] = sys::PERSPECTIVE_EDGE;
+      }
+      last_quad_id = 0;
+      while(free_positions.size()) free_positions.pop();
+    }
+
+    virtual void Remove(const unsigned int & id){
+      data[id+2]  = sys::PERSPECTIVE_EDGE;
+      data[id+7]  = sys::PERSPECTIVE_EDGE;
+      data[id+12] = sys::PERSPECTIVE_EDGE;
+      data[id+17] = sys::PERSPECTIVE_EDGE;
+      if(free_positions.size() < array_size10) free_positions.push(IdToIndex(id));
+    }
+
+    void Draw(){
+      // TODO
+      glDrawElements(GL_TRIANGLES, n_indexes, GL_UNSIGNED_INT, (GLvoid*)0);
+    }
+  };
+
 /*
 ['glMatrixMode', 'glLoadMatrixf', 'glLoadIdentity', 'glOrtho', '', 'glGetFloatv', 'glRotatef', 'glTranslatef', 'gluLookAt', 'gle){', '', 'gle);', '', '', 'gle,', 'glTexCoord2f', 'glEnableClientState', 'glVertexPointer', 'glTexCoordPointer', 'glEnable', 'glDrawArrays', 'gle=0,', 'glActiveTexture', 'glGenTextures', 'glBindTexture', 'glTexParameteri', 'glTexImage2D', 'glGenRenderbuffers', 'glBindRenderbuffer', 'glRenderbufferStorage', 'glGenFramebuffers', 'glBindFramebuffer', 'glFramebufferTexture2D', 'glFramebufferRenderbuffer', 'glCheckFramebufferStatus', 'glCheckFramebufferStatus"', 'glClearColor', '', '', 'gl_check_error', 'glGetError', 'glTexImage2D_err', 'gle', 'glCreateShader', 'glShaderSource', 'glCompileShader', 'glGetShaderiv', 'glGetShaderInfoLog', 'glCreateProgram', 'glAttachShader', 'glLinkProgram', 'glGetProgramiv', 'glDeleteShader', 'glGetActiveAttrib', 'glGetActiveUniform', 'gl_"', 'glUniform1i', 'glUniform1f', 'glGetUniformLocation', 'glUseProgram', 'glTexStorage2D', 'glTexSubImage2D', 'glGenerateMipmap']
 

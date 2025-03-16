@@ -7,6 +7,7 @@
 
 #include "pmgdlib_defs.h"
 #include "pmgdlib_msg.h"
+#include <stack>
 
 namespace pmgd {
 
@@ -159,6 +160,64 @@ namespace pmgd {
     virtual int LoadFrag(const std::string & text) = 0;
     virtual int CreateProgram() = 0;
     virtual ~Shader(){};
+  };
+
+  class QuadsArray : public BaseMsg {
+    virtual unsigned int IndexToId(unsigned int quad_index) = 0;
+    virtual unsigned int IdToIndex(unsigned int id) = 0;
+    virtual bool IsFreeIndex(unsigned int quad_index) = 0;
+    virtual unsigned int GetDefaultId(){
+      if(++last_quad_id >= max_quads_number) last_quad_id = 0;
+      return IndexToId(last_quad_id);
+    }
+
+    protected:
+    unsigned int last_quad_id = 0, max_quads_number = 0;
+    std::stack<unsigned int> free_positions;
+    virtual unsigned int FindFreePosition(){
+      /// search free position in data array
+      if(free_positions.size()) {
+        unsigned int index = free_positions.top();
+        free_positions.pop();
+        return IndexToId(index);
+      }
+      for(unsigned int i = last_quad_id+1; i < max_quads_number; i++){
+        if(IsFreeIndex(i)){ last_quad_id = i; return IndexToId(i); }
+      }
+      for(unsigned int i = 0; i <= last_quad_id; i++){
+        if(IsFreeIndex(i)){ last_quad_id = i; return IndexToId(i); }
+      }
+      msg_warning("can't find free position");
+      return GetDefaultId();
+    }
+
+    public:
+    QuadsArray(unsigned int max_quads_number){ this->max_quads_number = max_quads_number; };
+    virtual ~QuadsArray(){};
+
+    //! add element to the array
+    virtual unsigned int Add(TextureDrawData * quad_data) = 0;
+
+    //! update array data full
+    virtual void Set(const unsigned int & id, TextureDrawData * quad_data) = 0;
+
+    //! update array data position only
+    virtual void SetPos(const unsigned int & id, TextureDrawData * quad_data) = 0;
+
+    //! update array data texture only
+    virtual void SetText(const unsigned int & id, TextureDrawData * quad_data) = 0;
+
+    //! change position of element by shift 2d value
+    virtual void Move(const unsigned int & id, const v2 & shift) = 0;
+
+    //! remove all elements from array
+    virtual void Clean(){};
+
+    //! remove one elements from array
+    virtual void Remove(const unsigned int & id) = 0;
+
+    //! remove one elements from array
+    virtual void Draw() = 0;
   };
 
 };

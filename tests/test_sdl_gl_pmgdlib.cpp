@@ -3,8 +3,10 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <pmgdlib_gl.h>
+#include <vector>
 
 using namespace pmgd;
+using namespace std;
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
@@ -110,6 +112,67 @@ class TestSuite : public testing::Test {
 };
 
 TestContext* TestSuite::shared_resource_ = nullptr;
+
+TEST_F(TestSuite, quad_array) {
+  GTEST_COUT << "See many texture images" << std::endl;
+  std::shared_ptr<Image> image = get_test_image();
+  float size_x = SCREEN_WIDTH / 20 / float(SCREEN_WIDTH);
+  float size_y = SCREEN_HEIGHT / 20 / float(SCREEN_HEIGHT);
+  TextureGl td(image);
+
+
+  ShaderGl shader;
+  shader.LoadVert(vert);
+  shader.LoadFrag(frag);
+  shader.CreateProgram();
+
+  int n_quads = 30;
+  QuadsArrayGl qad(n_quads);
+
+  vector<unsigned int> ids;
+  vector<TextureDrawData*> quads;
+  vector<v2> directions;
+  for(int i = 0; i < n_quads; i ++){
+    TextureDrawData* data = new TextureDrawData(v2(0,0), v2(size_x,size_y));
+    float width = (rand() + 100) % 1000 / 1000.;
+    if(width > 1.) width = 0.9;
+    data->tpos = v2(0,0);
+    data->tsize = v2(width, width);
+    quads.push_back(data);
+    ids.push_back(qad.Add(data));
+    directions.push_back(v2(1,0).Rotated(rand()%360));
+  }
+
+  return;
+  for(int i = 0; i < 100; i++){
+    SDL_GL_SwapWindow(TestSuite::shared_resource_->window);
+    glClearColor(0., 0.5, 0.5, 1.);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    continue;
+    for(int qi = 0; qi < n_quads; qi ++){
+      TextureDrawData* quad = quads[qi];
+      v2 & speed = directions[qi];
+      quad->pos += speed;
+      if(quad->pos.x < -SCREEN_WIDTH) quad->pos.x = SCREEN_WIDTH;
+      if(quad->pos.x >  SCREEN_WIDTH) quad->pos.x = -SCREEN_WIDTH;
+      if(quad->pos.y < -SCREEN_HEIGHT) quad->pos.y = SCREEN_HEIGHT;
+      if(quad->pos.y >  SCREEN_HEIGHT) quad->pos.y = -SCREEN_HEIGHT;
+      qad.SetPos(ids[qi], quad);
+    }
+
+    // draw quads
+    td.Bind();
+    shader.Bind();
+    GLint position = glGetUniformLocation(shader.program_id, "text_0");
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(position, 0);
+    // qad.Draw();
+    shader.Unbind();
+    td.Unbind();
+  }
+}
 
 TEST_F(TestSuite, draw_texture_atlas) {
   GTEST_COUT << "See many texture images" << std::endl;

@@ -197,6 +197,7 @@ namespace pmgd {
 
     // tear down
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
     glDeleteBuffers(1, &VBOId);
@@ -419,7 +420,7 @@ namespace pmgd {
     static const int vertex_attributes = 5; // 5 attributes per vertex :D
     static const int quad_aray_size = quad_vertexes * vertex_attributes;
 
-    GLuint data_buffer_id, index_buffer_id;
+    GLuint vertex_array_id = 0, data_buffer_id = 0, index_buffer_id = 0;
 
     virtual unsigned int IndexToId(unsigned int quad_index){ return quad_index*quad_aray_size; };
     virtual unsigned int IdToIndex(unsigned int id){ return id/quad_aray_size; };
@@ -439,6 +440,14 @@ namespace pmgd {
       indexes = fill_indexes_array(max_quads_number);
 
       msg_debug("generate buffers");
+      glGenVertexArrays(1, &vertex_array_id);
+      if(not vertex_array_id){
+        msg_warning("glGenVertexArrays failed");
+        msg_warning(gl_get_errors_msg());
+        return;
+      }
+      glBindVertexArray(vertex_array_id);
+
       glGenBuffers(1, &data_buffer_id);
       if(not data_buffer_id){
         msg_warning("glGenBuffers data buffer failed");
@@ -454,9 +463,16 @@ namespace pmgd {
       }
 
       msg_debug("setup buffers data");
+      glBindBuffer(GL_ARRAY_BUFFER, data_buffer_id);
+      glBufferData(GL_ARRAY_BUFFER, array_size*sizeof(GLfloat), data, GL_DYNAMIC_DRAW);
+
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_id);
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indexes*sizeof(GLint), indexes, GL_STATIC_DRAW);
+
+      // tear down
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+      glBindVertexArray(0);
     }
 
     virtual ~QuadsArrayGl(){
@@ -510,6 +526,7 @@ namespace pmgd {
       data[id+15] = pos.x + perp.x; data[id+18] = tpos.x;
       data[id+16] = pos.y - perp.y; data[id+19] = tpos.y + tsize.y;
       data[id+17] = pos.z;
+      dirty = true;
     };
 
     virtual void SetPos(const unsigned int & id, TextureDrawData * quad_data){
@@ -525,6 +542,7 @@ namespace pmgd {
 
       data[id+15] = pos.x - size.x;
       data[id+16] = pos.y - size.y;
+      dirty = true;
     };
 
     virtual void SetText(const unsigned int & id, TextureDrawData * quad_data) {
@@ -540,6 +558,7 @@ namespace pmgd {
 
       data[id+18] = tpos.x;
       data[id+19] = tpos.y + tsize.y;
+      dirty = true;
     }
 
     virtual void Move(const unsigned int & id, const v2 & shift) {
@@ -554,6 +573,7 @@ namespace pmgd {
 
       data[id+15] += shift.x;
       data[id+16] += shift.y;
+      dirty = true;
     }
 
     virtual void Clean(){
@@ -565,6 +585,7 @@ namespace pmgd {
       }
       last_quad_id = 0;
       while(free_positions.size()) free_positions.pop();
+      dirty = true;
     }
 
     virtual void Remove(const unsigned int & id){
@@ -573,11 +594,22 @@ namespace pmgd {
       data[id+12] = sys::PERSPECTIVE_EDGE;
       data[id+17] = sys::PERSPECTIVE_EDGE;
       if(free_positions.size() < array_size10) free_positions.push(IdToIndex(id));
+      dirty = true;
     }
 
     void Draw(){
-      // TODO
-      glDrawElements(GL_TRIANGLES, n_indexes, GL_UNSIGNED_INT, (GLvoid*)0);
+      glBindVertexArray(vertex_array_id);
+      if(dirty){
+        /// TODO update only part
+        glBindBuffer(GL_ARRAY_BUFFER, data_buffer_id);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, array_size*sizeof(GLfloat), data);
+        glDrawElements(GL_TRIANGLES, n_indexes, GL_UNSIGNED_INT, (GLvoid*)0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+      } else {
+        glDrawElements(GL_TRIANGLES, n_indexes, GL_UNSIGNED_INT, (GLvoid*)0);
+      }
+      glBindVertexArray(0);
+      dirty = false;
     }
   };
 

@@ -172,6 +172,7 @@ namespace pmgd {
     }
 
     protected:
+    bool dirty = false;
     unsigned int last_quad_id = 0, max_quads_number = 0;
     std::stack<unsigned int> free_positions;
     virtual unsigned int FindFreePosition(){

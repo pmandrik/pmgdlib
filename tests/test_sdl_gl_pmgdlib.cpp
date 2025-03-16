@@ -113,6 +113,108 @@ class TestSuite : public testing::Test {
 
 TestContext* TestSuite::shared_resource_ = nullptr;
 
+TEST_F(TestSuite, frame_buffer) {
+  GTEST_COUT << "FrameBuffer test" << std::endl;
+}
+
+TEST_F(TestSuite, shader_uniform) {
+  GTEST_COUT << "Shader change color based on uniform" << std::endl;
+  if(false){
+    // legacy https://community.khronos.org/t/glbegin-glend-with-custom-shader-effect/73276/3
+    const std::string vert = R"(
+      void main(void)
+      {
+        gl_Position = ftransform();
+        gl_TexCoord [0] = gl_MultiTexCoord0;
+      }
+    )";
+
+    const std::string frag = R"(
+        uniform sampler2D text_in;
+        void main(void)
+        {
+          gl_FragColor = texture2D(text_in, gl_TexCoord[0].st);
+        }
+      )";
+  }
+
+  const std::string frag_uni = R"(
+      #version 300 es
+      precision mediump float;
+      in vec2 v_texCoord;
+      uniform float var0;
+      uniform sampler2D text_0;
+      out vec4 fragColor;
+      void main(){
+        fragColor = texture2D(text_0, v_texCoord);
+        fragColor.x = var0;
+        fragColor.y = max(v_texCoord.x, v_texCoord.y);
+      }
+    )";
+
+  std::shared_ptr<Image> image = get_test_image();
+  float size_x = SCREEN_WIDTH / 20 / float(SCREEN_WIDTH);
+  float size_y = SCREEN_HEIGHT / 20 / float(SCREEN_HEIGHT);
+  TextureGl td(image);
+
+  ShaderGl shader;
+  shader.LoadVert(vert);
+  shader.LoadFrag(frag_uni);
+  shader.CreateProgram();
+
+  int n_quads = 100;
+  QuadsArrayGl qad(n_quads);
+
+  vector<unsigned int> ids;
+  vector<TextureDrawData*> quads;
+  vector<v2> directions;
+  for(int i = 0; i < n_quads; i ++){
+    TextureDrawData* data = new TextureDrawData(v2(0,0), v2(size_x,size_y));
+    float width = (rand() + 100) % 1000 / 1000.;
+    if(width > 1.) width = 0.9;
+    data->tpos = v2(0,0);
+    data->tsize = v2(width, width);
+    quads.push_back(data);
+    unsigned int id = qad.Add(data);
+    ids.push_back(id);
+    float speed = 1+rand()%10;
+    directions.push_back(v2(speed/SCREEN_WIDTH,0).Rotated(rand()%360));
+  }
+
+  for(int i = 0; i < 200; i++){
+    SDL_GL_SwapWindow(TestSuite::shared_resource_->window);
+    glClearColor(0., 0.5, 0.5, 1.);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    for(int qi = 0; qi < n_quads; qi ++){
+      TextureDrawData* quad = quads[qi];
+      quad->pos += directions[qi];
+      if(quad->pos.x < -1) quad->pos.x = 1;
+      if(quad->pos.x >  1) quad->pos.x = -1;
+      if(quad->pos.y < -1) quad->pos.y = 1;
+      if(quad->pos.y >  1) quad->pos.y = -1;
+      quad->size = v2(size_x,size_y)*(0.75 + 0.5*cos(3.14 * (i / 200 + qi / n_quads)));
+      qad.SetPos(ids[qi], quad);
+      if(not (rand()%5)) directions[qi] = directions[qi].Rotated(rand()%10);
+    }
+
+    // draw quads
+    td.Bind();
+    shader.Bind();
+    GLint position = glGetUniformLocation(shader.program_id, "text_0");
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(position, 0);
+
+    GLint position_var0 = glGetUniformLocation(shader.program_id, "var0");
+    float var0 = 0.5 + 0.5 * cos(3.14 * i / 200);
+    glUniform1f(position_var0, var0);
+    qad.Draw();
+    shader.Unbind();
+    td.Unbind();
+  }
+}
+
 TEST_F(TestSuite, quad_array) {
   GTEST_COUT << "See many texture images" << std::endl;
   std::shared_ptr<Image> image = get_test_image();

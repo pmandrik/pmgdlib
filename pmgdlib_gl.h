@@ -90,11 +90,6 @@ namespace pmgd {
 	  glTexCoord2f(tpos.x, 	tpos.y + tsize.y);           glVertex3f(pos.x + perp.x, pos.y - perp.y, pos.z);
     glTexCoord2f(tpos.x, 	tpos.y);                     glVertex3f(pos.x - size.x, pos.y + size.y, pos.z);
 	  glEnd();
-
-    GLenum err;
-    while((err = glGetError()) != GL_NO_ERROR) {
-      printf("errors: %d", err);
-    }
   }
 
   // ======= draw array of quads ====================================================================
@@ -422,11 +417,9 @@ namespace pmgd {
 
     GLuint vertex_array_id = 0, data_buffer_id = 0, index_buffer_id = 0;
 
-    virtual unsigned int IndexToId(unsigned int quad_index){ msg("IndexToId", quad_index); return quad_index*quad_aray_size; };
+    virtual unsigned int IndexToId(unsigned int quad_index){ return quad_index*quad_aray_size; };
     virtual unsigned int IdToIndex(unsigned int id){ return id/quad_aray_size; };
-    virtual bool IsFreeIndex(unsigned int quad_index){
-      msg("IsFreeIndex ", quad_index);
-      return data[quad_index*quad_aray_size+2] <= sys::PERSPECTIVE_EDGE;
+    virtual bool IsFreeIndex(unsigned int quad_index){ return data[quad_index*quad_aray_size+2] <= sys::PERSPECTIVE_EDGE;
     };
 
     public:

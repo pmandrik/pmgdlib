@@ -168,25 +168,25 @@ namespace pmgd {
     virtual bool IsFreeIndex(unsigned int quad_index) = 0;
     virtual unsigned int GetDefaultId(){
       if(++last_quad_id >= max_quads_number) last_quad_id = 0;
-      return IndexToId(last_quad_id);
+      return last_quad_id;
     }
 
     protected:
     bool dirty = false;
-    unsigned int last_quad_id = 0, max_quads_number = 0;
+    unsigned int last_quad_id = -1, max_quads_number = 0;
     std::stack<unsigned int> free_positions;
     virtual unsigned int FindFreePosition(){
       /// search free position in data array
       if(free_positions.size()) {
         unsigned int index = free_positions.top();
         free_positions.pop();
-        return IndexToId(index);
+        return index;
       }
       for(unsigned int i = last_quad_id+1; i < max_quads_number; i++){
-        if(IsFreeIndex(i)){ last_quad_id = i; return IndexToId(i); }
+        if(IsFreeIndex(i)){ last_quad_id = i; return i; }
       }
       for(unsigned int i = 0; i <= last_quad_id; i++){
-        if(IsFreeIndex(i)){ last_quad_id = i; return IndexToId(i); }
+        if(IsFreeIndex(i)){ last_quad_id = i; return i; }
       }
       msg_warning("can't find free position");
       return GetDefaultId();

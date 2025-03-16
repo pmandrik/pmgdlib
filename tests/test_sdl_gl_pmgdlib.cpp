@@ -126,7 +126,7 @@ TEST_F(TestSuite, quad_array) {
   shader.LoadFrag(frag);
   shader.CreateProgram();
 
-  int n_quads = 30;
+  int n_quads = 1000;
   QuadsArrayGl qad(n_quads);
 
   vector<unsigned int> ids;
@@ -139,27 +139,37 @@ TEST_F(TestSuite, quad_array) {
     data->tpos = v2(0,0);
     data->tsize = v2(width, width);
     quads.push_back(data);
-    ids.push_back(qad.Add(data));
-    directions.push_back(v2(1,0).Rotated(rand()%360));
+    unsigned int id = qad.Add(data);
+    ids.push_back(id);
+    float speed = 1+rand()%10;
+    directions.push_back(v2(speed/SCREEN_WIDTH,0).Rotated(rand()%360));
   }
 
-  return;
-  for(int i = 0; i < 100; i++){
+  for(int i = 0; i < 200; i++){
     SDL_GL_SwapWindow(TestSuite::shared_resource_->window);
     glClearColor(0., 0.5, 0.5, 1.);
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    continue;
     for(int qi = 0; qi < n_quads; qi ++){
       TextureDrawData* quad = quads[qi];
-      v2 & speed = directions[qi];
-      quad->pos += speed;
-      if(quad->pos.x < -SCREEN_WIDTH) quad->pos.x = SCREEN_WIDTH;
-      if(quad->pos.x >  SCREEN_WIDTH) quad->pos.x = -SCREEN_WIDTH;
-      if(quad->pos.y < -SCREEN_HEIGHT) quad->pos.y = SCREEN_HEIGHT;
-      if(quad->pos.y >  SCREEN_HEIGHT) quad->pos.y = -SCREEN_HEIGHT;
+      quad->pos += directions[qi];
+      if(quad->pos.x < -1) quad->pos.x = 1;
+      if(quad->pos.x >  1) quad->pos.x = -1;
+      if(quad->pos.y < -1) quad->pos.y = 1;
+      if(quad->pos.y >  1) quad->pos.y = -1;
+      quad->size = v2(size_x,size_y)*(0.75 + 0.5*cos(3.14 * (i / 200 + qi / n_quads)));
       qad.SetPos(ids[qi], quad);
+
+      if(not (rand()%10)) directions[qi] = directions[qi].Rotated(rand()%60-30);
+
+      if(not (rand()%20)){
+        float width = (rand() + 100) % 1000 / 1000.;
+        if(width > 1.) width = 0.9;
+        quad->tpos = v2(0,0);
+        quad->tsize = v2(width, width);
+        qad.SetText(ids[qi], quad);
+      }
     }
 
     // draw quads
@@ -168,7 +178,7 @@ TEST_F(TestSuite, quad_array) {
     GLint position = glGetUniformLocation(shader.program_id, "text_0");
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(position, 0);
-    // qad.Draw();
+    qad.Draw();
     shader.Unbind();
     td.Unbind();
   }

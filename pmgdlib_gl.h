@@ -422,9 +422,10 @@ namespace pmgd {
 
     GLuint vertex_array_id = 0, data_buffer_id = 0, index_buffer_id = 0;
 
-    virtual unsigned int IndexToId(unsigned int quad_index){ return quad_index*quad_aray_size; };
+    virtual unsigned int IndexToId(unsigned int quad_index){ msg("IndexToId", quad_index); return quad_index*quad_aray_size; };
     virtual unsigned int IdToIndex(unsigned int id){ return id/quad_aray_size; };
     virtual bool IsFreeIndex(unsigned int quad_index){
+      msg("IsFreeIndex ", quad_index);
       return data[quad_index*quad_aray_size+2] <= sys::PERSPECTIVE_EDGE;
     };
 
@@ -436,7 +437,7 @@ namespace pmgd {
       data = new float[array_size];
       Clean();
 
-      n_indexes = 6*max_quads_number;
+      n_indexes = 6 * max_quads_number;
       indexes = fill_indexes_array(max_quads_number);
 
       msg_debug("generate buffers");
@@ -465,6 +466,14 @@ namespace pmgd {
       msg_debug("setup buffers data");
       glBindBuffer(GL_ARRAY_BUFFER, data_buffer_id);
       glBufferData(GL_ARRAY_BUFFER, array_size*sizeof(GLfloat), data, GL_DYNAMIC_DRAW);
+
+      // specify position attribute
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, vertex_attributes * sizeof(GLfloat), (GLvoid*)0);
+      glEnableVertexAttribArray(0);
+
+      // specify texture coordinate
+      glVertexAttribPointer(1, 2, GL_FLOAT, GL_TRUE, vertex_attributes * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+      glEnableVertexAttribArray(1);
 
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_id);
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indexes*sizeof(GLint), indexes, GL_STATIC_DRAW);
@@ -583,7 +592,7 @@ namespace pmgd {
         data[id+12] = sys::PERSPECTIVE_EDGE;
         data[id+17] = sys::PERSPECTIVE_EDGE;
       }
-      last_quad_id = 0;
+      last_quad_id = -1;
       while(free_positions.size()) free_positions.pop();
       dirty = true;
     }
@@ -598,7 +607,10 @@ namespace pmgd {
     }
 
     void Draw(){
+      //draw_textured_elements(max_quads_number*4, data, max_quads_number*6, indexes);
       glBindVertexArray(vertex_array_id);
+      glBindBuffer(GL_ARRAY_BUFFER, data_buffer_id);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_id);
       if(dirty){
         /// TODO update only part
         glBindBuffer(GL_ARRAY_BUFFER, data_buffer_id);

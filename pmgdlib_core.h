@@ -154,11 +154,21 @@ namespace pmgd {
       };
   };
 
+  class ShaderUniform1f {
+    int index;
+    std::string name;
+    float val;
+  };
+
   class Shader : public BaseMsg {
     public:
     virtual int LoadVert(const std::string & text) = 0;
     virtual int LoadFrag(const std::string & text) = 0;
     virtual int CreateProgram() = 0;
+    virtual int AddUniform(const std::string name) = 0;
+    virtual int GetUniform(const std::string name) = 0;
+    virtual void UpdateUniform1f(const int & pos, const float & val) = 0;
+    virtual void EnableTexture(const int & pos, const int index) = 0;
     virtual ~Shader(){};
   };
 
@@ -219,6 +229,37 @@ namespace pmgd {
 
     //! remove one elements from array
     virtual void Draw() = 0;
+  };
+
+  class FrameBuffer : public BaseMsg {
+      /// frame buffer is a texture + depth buffer stored at GPU and with fast GPU access
+
+    public:
+      virtual ~FrameBuffer(){};
+
+      //! set this buffer as target
+      virtual void Target() = 0;
+
+      //! unset this buffer as target
+      virtual void Untarget() = 0;
+
+      //! fill buffer with some 0 data
+      virtual void Clear() = 0;
+
+      //! same as Clear
+      void Clean(){ Clear(); };
+
+      //! bind frame buffer texture, so can be used to draw
+      virtual void BindTexture(const int & index) = 0;
+
+      //! unbind frame buffer texture
+      virtual void UnbindTexture(const int & index) = 0;
+
+      //! draw framebuffer rectangle
+      // virtual void Draw(const float & xd = -sys::FBW2, const float & yd = -sys::FBH2, const float & xu = sys::FBW2, const float & yu = sys::FBH2, float z_level=0) = 0;
+
+      //! draw framebuffer rectangle using size from Screen Window
+      // virtual void DrawOnScreen(const bool & mirror_x=false, const bool & mirror_y=false) = 0;
   };
 
 };

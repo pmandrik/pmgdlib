@@ -291,7 +291,13 @@ namespace pmgd {
 
   // ======= texture ====================================================================
   class ShaderGl : public Shader {
+    GLuint shader_vert = 0, shader_frag = 0;
+    GLuint program_id = 0;
+    std::unordered_map<std::string, int> uniforms;
+
     public:
+    GLuint GetProgramId() const { return program_id; }
+
     int Load(GLenum type, const std::string & text){
       msg_debug("load shader ...");
       msg_verbose(text);
@@ -394,8 +400,56 @@ namespace pmgd {
     virtual void Bind(){   glUseProgram( program_id ); };
     virtual void Unbind(){ glUseProgram( 0 ); };
 
-    GLuint shader_vert = 0, shader_frag = 0;
-    GLuint program_id = 0;
+    virtual int AddUniform(const std::string name){
+      if(uniforms.find(name) != uniforms.end()){
+        msg_warning("uniform \"" + name + "\" already in map, skip");
+        return PM_ERROR_INCORRECT_ARGUMENTS;
+      }
+
+      if(not program_id){
+        msg_warning("program_id 0, call CreateProgram() first");
+        return PM_ERROR_GL;
+      }
+      const GLchar * name_cstr = (const GLchar *) name.c_str();
+      Bind();
+      GLint position = glGetUniformLocation(program_id, name_cstr);
+      Unbind();
+      if(position == -1){
+        msg_warning("glGetUniformLocation() return -1 for variable name of the uniform variable \""+name+"\"");
+        return PM_ERROR_GL;
+      }
+      msg_debug("find uniform \"" + name + "\" at position", position);
+      uniforms[name] = position;
+      return PM_SUCCESS;
+    }
+
+    virtual int GetUniform(const std::string name){
+      std::unordered_map <std::string, int>::iterator it = uniforms.find(name);
+      if(it == uniforms.end()){
+        msg_warning("can't find uniform variable with name\""+name+"\", add it first with AddUniform()");
+        return -1;
+      }
+      return it->second;
+    }
+
+    virtual void UpdateUniform1f(const int & pos, const float & val){
+      glUniform1f( (GLint) pos, val );
+    }
+
+    virtual void EnableTexture(const int & pos, const int index){
+        if( index == 0 ){
+          glActiveTexture(GL_TEXTURE0);
+          glUniform1i((GLint) pos, 0);
+        } else  if( index == 1 ){
+          glActiveTexture(GL_TEXTURE1);
+          glUniform1i((GLint) pos, 1);
+        } else if( index == 2 ){
+          glActiveTexture(GL_TEXTURE2);
+          glUniform1i((GLint) pos, 2);
+        } else {
+          msg_warning("index (", index, ") must be in range [0, 2]");
+        }
+    }
   };
 
   void draw_textured_quad(TextureGl & text, const TextureDrawData & data){
@@ -617,6 +671,91 @@ namespace pmgd {
       dirty = false;
     }
   };
+
+  /*
+  class FrameBufferGL : public FrameBuffer {
+    GLuint fbo_id, texture_id, depth_id;
+
+    /// OpenGL frame buffer implementation
+    public :
+      FrameBufferGL(){
+        // Texture
+        glEnable(GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0);
+        glGenTextures(1, &texture_id);
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sys::FBW, sys::FBH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // Depth buffer
+        glGenRenderbuffers(1, &depth_id);
+        glBindRenderbuffer(GL_RENDERBUFFER, depth_id);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sys::FBW, sys::FBH);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        // Framebuffer to link everything together
+        glGenFramebuffers(1, &fbo_id);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture_id, 0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_id);
+
+        // check
+        GLenum status;
+        if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
+          msg_err("glCheckFramebufferStatus" , status);
+        } else MSG_INFO("FrameBuffer generate done ok", fbo_id, texture_id, depth_id);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      }
+
+      void Target()  {
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+        glViewport( 0, 0, sys::FBW, sys::FBH );
+      }
+      void Untarget(){ glBindFramebuffer(GL_FRAMEBUFFER, 0);      }
+
+      void Clear(){
+        Target();
+        glClearColor(sys::fb_def_color.r,sys::fb_def_color.g,sys::fb_def_color.b,sys::fb_def_color.a);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        Untarget();
+      }
+      void Clean(){ Clear(); };
+
+      void BindTexture(const int & index){
+        glActiveTexture(GL_TEXTURE0 + index);
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+      }
+
+      void UnbindTexture(const int & index){
+        glActiveTexture(GL_TEXTURE0 + index);
+        glBindTexture(GL_TEXTURE_2D, 0);
+      }
+
+      void Draw(const float & xd = -sys::FBW2, const float & yd = -sys::FBH2, const float & xu = sys::FBW2, const float & yu = sys::FBH2, float z_level=0){
+        /// Draw framebuffer rectangle, in most cases:
+        /// 1) on the another framebuffer, than sizes are taken from sys::FBW, sys::FBH
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+        glBegin(GL_QUADS);
+        glTexCoord2f(1, 	1);  glVertex3f( xu,  yu, z_level);
+        glTexCoord2f(0,   1);  glVertex3f( xd,  yu, z_level);
+        glTexCoord2f(0,   0);  glVertex3f( xd,  yd, z_level);
+        glTexCoord2f(1, 	0);  glVertex3f( xu,  yd, z_level);
+        glEnd();
+        glBindTexture(GL_TEXTURE_2D, 0);
+      }
+
+      void DrawOnWindow(const bool & mirror_x=false, const bool & mirror_y=false){
+        if(mirror_x and mirror_y) Draw(sys::WW2, sys::WH2, -sys::WW2, -sys::WH2);
+        else if(mirror_x) Draw(sys::WW2, -sys::WH2, -sys::WW2, sys::WH2);
+        else if(mirror_y) Draw(-sys::WW2, sys::WH2, sys::WW2, -sys::WH2);
+        else Draw(-sys::WW2, -sys::WH2, sys::WW2, sys::WH2);
+      }
+  };
+  */
 
 /*
 ['glMatrixMode', 'glLoadMatrixf', 'glLoadIdentity', 'glOrtho', '', 'glGetFloatv', 'glRotatef', 'glTranslatef', 'gluLookAt', 'gle){', '', 'gle);', '', '', 'gle,', 'glTexCoord2f', 'glEnableClientState', 'glVertexPointer', 'glTexCoordPointer', 'glEnable', 'glDrawArrays', 'gle=0,', 'glActiveTexture', 'glGenTextures', 'glBindTexture', 'glTexParameteri', 'glTexImage2D', 'glGenRenderbuffers', 'glBindRenderbuffer', 'glRenderbufferStorage', 'glGenFramebuffers', 'glBindFramebuffer', 'glFramebufferTexture2D', 'glFramebufferRenderbuffer', 'glCheckFramebufferStatus', 'glCheckFramebufferStatus"', 'glClearColor', '', '', 'gl_check_error', 'glGetError', 'glTexImage2D_err', 'gle', 'glCreateShader', 'glShaderSource', 'glCompileShader', 'glGetShaderiv', 'glGetShaderInfoLog', 'glCreateProgram', 'glAttachShader', 'glLinkProgram', 'glGetProgramiv', 'glDeleteShader', 'glGetActiveAttrib', 'glGetActiveUniform', 'gl_"', 'glUniform1i', 'glUniform1f', 'glGetUniformLocation', 'glUseProgram', 'glTexStorage2D', 'glTexSubImage2D', 'glGenerateMipmap']

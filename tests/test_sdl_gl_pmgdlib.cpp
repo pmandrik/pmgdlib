@@ -161,6 +161,8 @@ TEST_F(TestSuite, shader_uniform) {
   shader.LoadVert(vert);
   shader.LoadFrag(frag_uni);
   shader.CreateProgram();
+  shader.AddUniform("text_0");
+  shader.AddUniform("var0");
 
   int n_quads = 100;
   QuadsArrayGl qad(n_quads);
@@ -202,13 +204,9 @@ TEST_F(TestSuite, shader_uniform) {
     // draw quads
     td.Bind();
     shader.Bind();
-    GLint position = glGetUniformLocation(shader.program_id, "text_0");
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(position, 0);
-
-    GLint position_var0 = glGetUniformLocation(shader.program_id, "var0");
+    shader.EnableTexture(shader.GetUniform("text_0"), 0);
     float var0 = 0.5 + 0.5 * cos(3.14 * i / 200);
-    glUniform1f(position_var0, var0);
+    shader.UpdateUniform1f(shader.GetUniform("var0"), var0);
     qad.Draw();
     shader.Unbind();
     td.Unbind();
@@ -277,7 +275,7 @@ TEST_F(TestSuite, quad_array) {
     // draw quads
     td.Bind();
     shader.Bind();
-    GLint position = glGetUniformLocation(shader.program_id, "text_0");
+    GLint position = glGetUniformLocation(shader.GetProgramId(), "text_0");
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(position, 0);
     qad.Draw();
@@ -343,7 +341,7 @@ TEST_F(TestSuite, draw_texture_atlas) {
     // draw quads
     td.Bind();
     shader.Bind();
-    GLint position = glGetUniformLocation(shader.program_id, "text_0");
+    GLint position = glGetUniformLocation(shader.GetProgramId(), "text_0");
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(position, 0);
 

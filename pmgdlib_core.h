@@ -227,14 +227,24 @@ namespace pmgd {
     //! remove one elements from array
     virtual void Remove(const unsigned int & id) = 0;
 
-    //! remove one elements from array
+    //! draw
     virtual void Draw() = 0;
   };
 
   class FrameBuffer : public BaseMsg {
-      /// frame buffer is a texture + depth buffer stored at GPU and with fast GPU access
+    /// frame buffer is a texture + depth buffer stored at GPU and with fast GPU access
+    protected:
+    rgb clear_color = rgb(0,1,1);
+    int size_x, size_y;
 
     public:
+      FrameBuffer(int size_x, int size_y){
+        this->size_x = size_x;
+        this->size_y = size_y;
+      };
+
+      void SetClearColor(rgb color){ clear_color = color; }
+
       virtual ~FrameBuffer(){};
 
       //! set this buffer as target
@@ -250,16 +260,10 @@ namespace pmgd {
       void Clean(){ Clear(); };
 
       //! bind frame buffer texture, so can be used to draw
-      virtual void BindTexture(const int & index) = 0;
+      virtual void BindTexture() = 0;
 
       //! unbind frame buffer texture
-      virtual void UnbindTexture(const int & index) = 0;
-
-      //! draw framebuffer rectangle
-      // virtual void Draw(const float & xd = -sys::FBW2, const float & yd = -sys::FBH2, const float & xu = sys::FBW2, const float & yu = sys::FBH2, float z_level=0) = 0;
-
-      //! draw framebuffer rectangle using size from Screen Window
-      // virtual void DrawOnScreen(const bool & mirror_x=false, const bool & mirror_y=false) = 0;
+      virtual void UnbindTexture() = 0;
   };
 
 };

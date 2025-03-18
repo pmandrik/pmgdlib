@@ -10,7 +10,7 @@
 #include <source_location>
 
 namespace pmgd {
-  enum verbose{
+  enum verbose {
     SILENCE=0,
     ERROR,
     WARNING,

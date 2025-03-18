@@ -672,29 +672,39 @@ namespace pmgd {
     }
   };
 
-  /*
   class FrameBufferGL : public FrameBuffer {
     GLuint fbo_id, texture_id, depth_id;
 
     /// OpenGL frame buffer implementation
     public :
-      FrameBufferGL(){
+      FrameBufferGL(int size_x, int size_y) : FrameBuffer(size_x, size_y) {
+        msg_debug("create frame buffer ...");
         // Texture
         glEnable(GL_TEXTURE_2D);
         glActiveTexture(GL_TEXTURE0);
         glGenTextures(1, &texture_id);
+        if(not texture_id){
+          msg_warning("glGenTextures failed");
+          msg_warning(gl_get_errors_msg());
+          return;
+        }
         glBindTexture(GL_TEXTURE_2D, texture_id);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sys::FBW, sys::FBH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)size_x, (GLsizei)size_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         glBindTexture(GL_TEXTURE_2D, 0);
 
         // Depth buffer
         glGenRenderbuffers(1, &depth_id);
+        if(not depth_id){
+          msg_warning("glGenRenderbuffers failed");
+          msg_warning(gl_get_errors_msg());
+          return;
+        }
         glBindRenderbuffer(GL_RENDERBUFFER, depth_id);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sys::FBW, sys::FBH);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, (GLsizei)size_x, (GLsizei)size_y);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         // Framebuffer to link everything together
@@ -705,57 +715,54 @@ namespace pmgd {
 
         // check
         GLenum status;
-        if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
-          msg_err("glCheckFramebufferStatus" , status);
-        } else MSG_INFO("FrameBuffer generate done ok", fbo_id, texture_id, depth_id);
+        if((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
+          msg_err("glCheckFramebufferStatus invalid status", status);
+          return;
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        msg_debug("fcreate frame buffer ... ok", fbo_id, texture_id, depth_id);
+      }
+
+      virtual void Target(){
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+        glViewport( 0, 0, size_x, size_y );
+      }
+      virtual void Untarget(){ glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+
+      virtual void Clear(){
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
+        glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
       }
 
-      void Target()  {
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
-        glViewport( 0, 0, sys::FBW, sys::FBH );
-      }
-      void Untarget(){ glBindFramebuffer(GL_FRAMEBUFFER, 0);      }
-
-      void Clear(){
-        Target();
-        glClearColor(sys::fb_def_color.r,sys::fb_def_color.g,sys::fb_def_color.b,sys::fb_def_color.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        Untarget();
-      }
-      void Clean(){ Clear(); };
-
-      void BindTexture(const int & index){
-        glActiveTexture(GL_TEXTURE0 + index);
+      virtual void BindTexture(){
+        // glActiveTexture(GL_TEXTURE0 + index);
         glBindTexture(GL_TEXTURE_2D, texture_id);
       }
 
-      void UnbindTexture(const int & index){
-        glActiveTexture(GL_TEXTURE0 + index);
+      virtual void UnbindTexture(){
+        // glActiveTexture(GL_TEXTURE0 + index);
         glBindTexture(GL_TEXTURE_2D, 0);
       }
 
-      void Draw(const float & xd = -sys::FBW2, const float & yd = -sys::FBH2, const float & xu = sys::FBW2, const float & yu = sys::FBH2, float z_level=0){
-        /// Draw framebuffer rectangle, in most cases:
-        /// 1) on the another framebuffer, than sizes are taken from sys::FBW, sys::FBH
-        glBindTexture(GL_TEXTURE_2D, texture_id);
-        glBegin(GL_QUADS);
-        glTexCoord2f(1, 	1);  glVertex3f( xu,  yu, z_level);
-        glTexCoord2f(0,   1);  glVertex3f( xd,  yu, z_level);
-        glTexCoord2f(0,   0);  glVertex3f( xd,  yd, z_level);
-        glTexCoord2f(1, 	0);  glVertex3f( xu,  yd, z_level);
-        glEnd();
-        glBindTexture(GL_TEXTURE_2D, 0);
-      }
-
-      void DrawOnWindow(const bool & mirror_x=false, const bool & mirror_y=false){
+      /*
+       * void DrawOnWindow(const bool & mirror_x=false, const bool & mirror_y=false){
         if(mirror_x and mirror_y) Draw(sys::WW2, sys::WH2, -sys::WW2, -sys::WH2);
         else if(mirror_x) Draw(sys::WW2, -sys::WH2, -sys::WW2, sys::WH2);
         else if(mirror_y) Draw(-sys::WW2, sys::WH2, sys::WW2, -sys::WH2);
         else Draw(-sys::WW2, -sys::WH2, sys::WW2, sys::WH2);
       }
+      */
   };
-  */
+
+  void draw_fb_quad(FrameBufferGL & fb, const TextureDrawData & data){
+    fb.BindTexture();
+    glEnable(GL_TEXTURE_2D);
+    draw_textured_quad(data.pos, data.size, data.tpos, data.tsize, data.angle, data.flip_x, data.flip_y);
+    fb.UnbindTexture();
+  };
 
 /*
 ['glMatrixMode', 'glLoadMatrixf', 'glLoadIdentity', 'glOrtho', '', 'glGetFloatv', 'glRotatef', 'glTranslatef', 'gluLookAt', 'gle){', '', 'gle);', '', '', 'gle,', 'glTexCoord2f', 'glEnableClientState', 'glVertexPointer', 'glTexCoordPointer', 'glEnable', 'glDrawArrays', 'gle=0,', 'glActiveTexture', 'glGenTextures', 'glBindTexture', 'glTexParameteri', 'glTexImage2D', 'glGenRenderbuffers', 'glBindRenderbuffer', 'glRenderbufferStorage', 'glGenFramebuffers', 'glBindFramebuffer', 'glFramebufferTexture2D', 'glFramebufferRenderbuffer', 'glCheckFramebufferStatus', 'glCheckFramebufferStatus"', 'glClearColor', '', '', 'gl_check_error', 'glGetError', 'glTexImage2D_err', 'gle', 'glCreateShader', 'glShaderSource', 'glCompileShader', 'glGetShaderiv', 'glGetShaderInfoLog', 'glCreateProgram', 'glAttachShader', 'glLinkProgram', 'glGetProgramiv', 'glDeleteShader', 'glGetActiveAttrib', 'glGetActiveUniform', 'gl_"', 'glUniform1i', 'glUniform1f', 'glGetUniformLocation', 'glUseProgram', 'glTexStorage2D', 'glTexSubImage2D', 'glGenerateMipmap']

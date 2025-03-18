@@ -113,8 +113,55 @@ class TestSuite : public testing::Test {
 
 TestContext* TestSuite::shared_resource_ = nullptr;
 
+TEST_F(TestSuite, double_frame_buffer) {
+  GTEST_COUT << "DoubleFrameBuffer test" << std::endl;
+  float size_x = SCREEN_WIDTH / 2 / float(SCREEN_WIDTH);
+  float size_y = SCREEN_HEIGHT / 2 / float(SCREEN_HEIGHT);
+
+  std::shared_ptr<Image> image = get_test_image();
+  TextureGl td(image);
+  TextureDrawData image_data(v2(0,0), v2(size_x/2,size_y/2));
+
+  FrameBufferGL fb(100, 100);
+  TextureDrawData data(v2(0,0), v2(size_x,size_y));
+
+  for(int i = 0; i < 200; i++){
+  }
+}
+
 TEST_F(TestSuite, frame_buffer) {
   GTEST_COUT << "FrameBuffer test" << std::endl;
+  float size_x = SCREEN_WIDTH / 2 / float(SCREEN_WIDTH);
+  float size_y = SCREEN_HEIGHT / 2 / float(SCREEN_HEIGHT);
+
+  std::shared_ptr<Image> image = get_test_image();
+  TextureGl td(image);
+  TextureDrawData image_data(v2(0,0), v2(size_x/2,size_y/2));
+
+  FrameBufferGL fb(100, 100);
+  TextureDrawData data(v2(0,0), v2(size_x,size_y));
+
+  for(int i = 0; i < 200; i++){
+    SDL_GL_SwapWindow(TestSuite::shared_resource_->window);
+    glClearColor(0., 0.5, 0.5, 1.);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    fb.SetClearColor(rgb(abs(cos(2*3.14*i/200.)),0,0));
+    fb.Clear();
+
+    fb.Target();
+    image_data.angle = 360*i/100;
+    image_data.pos = v2(0.1).Rotated(360*i/100);
+    draw_textured_quad(td, image_data);
+    fb.Untarget();
+
+    glViewport( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT );
+    data.angle = 360*i/100;
+    draw_fb_quad(fb, data);
+
+    SDL_Delay(20);
+  }
 }
 
 TEST_F(TestSuite, shader_uniform) {
@@ -210,6 +257,7 @@ TEST_F(TestSuite, shader_uniform) {
     qad.Draw();
     shader.Unbind();
     td.Unbind();
+    SDL_Delay(30);
   }
 }
 
@@ -281,6 +329,7 @@ TEST_F(TestSuite, quad_array) {
     qad.Draw();
     shader.Unbind();
     td.Unbind();
+    SDL_Delay(30);
   }
 }
 
@@ -425,6 +474,8 @@ TEST_F(TestSuite, invalid_parameters) {
 }
 
 int main(int argc, char **argv) {
+  int & vlevel = msg_verbose_lvl();
+  vlevel = verbose::VERBOSE;
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

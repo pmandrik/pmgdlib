@@ -122,11 +122,96 @@ TEST_F(TestSuite, double_frame_buffer) {
   TextureGl td(image);
   TextureDrawData image_data(v2(0,0), v2(size_x/2,size_y/2));
 
-  FrameBufferGL fb(100, 100);
+  int fb_size_x = 100;
+  int fb_size_y = 100;
+  std::shared_ptr<FrameBufferGL> fb1 = std::make_shared<FrameBufferGL>(fb_size_x, fb_size_y);
+  std::shared_ptr<FrameBufferGL> fb2 = std::make_shared<FrameBufferGL>(fb_size_x, fb_size_y);
+  fb1->Clear();
+  fb2->Clear();
+  DoubleFrameBuffer dfb(fb1, fb2);
+  TextureDrawData dfb_data(v2(0,0), v2(1, 1));
+  dfb_data.flip_y = true;
   TextureDrawData data(v2(0,0), v2(size_x,size_y));
 
-  for(int i = 0; i < 200; i++){
+  // draw image data once
+  dfb.Target();
+  draw_textured_quad(td, image_data);
+  dfb.Untarget();
+
+  // setup shader
+  const std::string vert_fb = R"(
+    #version 300 es
+    in vec3 in_Position;
+    in vec2 a_texCoord;
+    out vec2 v_texCoord;
+
+    void main(void) {
+      gl_Position = vec4(in_Position, 1.0);
+      v_texCoord = a_texCoord;
+    }
+  )";
+
+  const std::string frag_uni = R"(
+    #version 300 es
+    precision mediump float;
+    in vec2 v_texCoord;
+    uniform float var0;
+    uniform float var1;
+    uniform sampler2D text_0;
+    out vec4 fragColor;
+    void main(){
+      vec2 v_texCoord_u = v_texCoord + vec2(var1/100., 1./100.);
+      vec2 v_texCoord_d = v_texCoord - vec2(1./100., var1/100.);
+
+      fragColor = texture2D(text_0, v_texCoord);
+      vec4 fragColor_u = texture2D(text_0, v_texCoord_u);
+      vec4 fragColor_d = texture2D(text_0, v_texCoord_d);
+
+      fragColor = var0 * fragColor + 0.5*(1. - var0) * (fragColor_u + fragColor_d);
+      fragColor.a = 1.;
+    }
+  )";
+
+  ShaderGl shader;
+  shader.LoadVert(vert_fb);
+  shader.LoadFrag(frag_uni);
+  shader.CreateProgram();
+  shader.AddUniform("text_0");
+  shader.AddUniform("var0");
+  shader.AddUniform("var1");
+
+  QuadsArrayGl qad(1);
+  qad.Add(&dfb_data);
+
+  for(int i = 0; i < 300; i++){
+    SDL_GL_SwapWindow(TestSuite::shared_resource_->window);
+    glClearColor(0., 0.5, 0.5, 1.);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+
+    dfb.Flip();
+    dfb.BindBackTexture();
+    dfb.Target();
+    if(i>30) {
+      shader.Bind();
+      shader.EnableTexture(shader.GetUniform("text_0"), 0);
+      shader.UpdateUniform1f(shader.GetUniform("var0"), 0.96);
+      shader.UpdateUniform1f(shader.GetUniform("var1"), 1 + 5 * cos(3.14 * i/50.));
+      qad.Draw();
+      shader.Unbind();
+    } else {
+      draw_dfb_back_quad(dfb, dfb_data);
+    }
+    dfb.Untarget();
+    dfb.UnbindBackTexture();
+
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    draw_dfb_quad(dfb, data);
+
+    SDL_Delay(20);
   }
+  exit(0);
 }
 
 TEST_F(TestSuite, frame_buffer) {

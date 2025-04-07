@@ -5,6 +5,8 @@
 #ifndef PMGDLIB_MATH_HH
 #define PMGDLIB_MATH_HH 1
 
+#include <math.h>
+
 namespace pmgd {
 
   const float PI = 3.14159265358979323846;
@@ -119,7 +121,8 @@ namespace pmgd {
   // ======= rgb ====================================================================
   class rgb {
     public:
-    rgb(float xx = 0., float yy = 0., float zz = 0., float aa = 1.):r(xx),g(yy),b(zz),a(aa){};
+    rgb(int xx = 0, int yy = 0, int zz = 0, int aa = 255):r(xx/255.f),g(yy/255.f),b(zz/255.f),a(aa/255.f){};
+    rgb(float xx = 0.f, float yy = 0.f, float zz = 0.f, float aa = 1.f):r(xx),g(yy),b(zz),a(aa){};
     float r, g, b, a;
 
     rgb & operator *= (float value){r *= value; g *= value; b *= value; return *this;}
@@ -130,9 +133,9 @@ namespace pmgd {
     rgb & operator /= (const rgb & v){r /= v.r; g /= v.g; b /= v.b; return *this;}
     rgb operator - () const {return rgb(-r, -g, -b);}
 
-    rgb Norm_255i(){ return rgb(int(r*255), int(g*255), int(b*255), int(a*255) ); }
-    rgb Norm_255f(){ return rgb(r*255, g*255, b*255, a*255 ); }
-    rgb Norm_1f()  { return rgb(r/255., g/255., b/255., a/255. ); }
+    rgb Norm_255i(){return rgb(int(r*255), int(g*255), int(b*255), int(a*255));}
+    rgb Norm_255f(){return rgb(r*255, g*255, b*255, a*255);}
+    rgb Norm_1f()  {return rgb(r/255.f, g/255.f, b/255.f, a/255.f);}
 
     bool Equal_i(const int & rr, const int & gg, const int & bb) const {
       return (int(r)==rr) and (int(g)==gg) and (int(b)==bb);

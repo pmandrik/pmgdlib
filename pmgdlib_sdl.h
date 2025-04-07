@@ -8,6 +8,8 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 
+#include <pmgdlib_core.h>
+
 namespace pmgd {
 
   const int SDL_KSTART = 4;
@@ -246,7 +248,8 @@ namespace pmgd {
   //! - call ClockerSDL to sleep between frames
   class CoreSDL : public Core {
     SDL_Event game_event;
-    Mouse * mouse, Keyboard * keyboard;
+    Mouse * mouse;
+    Keyboard * keyboard;
     const Uint8 * kstate;
     bool mouse_locker = false;
     ClockerSDL clocker_sdl;
@@ -255,14 +258,14 @@ namespace pmgd {
     SDL_Window * window;
     SDL_GLContext glcontext;
 
-    CoreSDL(Mouse * mouse, Keyboard * keyboard, int fps) : Core(mouse, keyboard, fps) {
+    CoreSDL(Mouse * mouse, Keyboard * keyboard, int fps) {
       this->mouse = mouse;
       this->keyboard = keyboard;
       clocker_sdl = ClockerSDL(fps);
     }
 
     void CastMouseClick(const SDL_Event & game_event){
-      if(locker) return;
+      if(mouse_locker) return;
       if( game_event.type == SDL_MOUSEBUTTONDOWN ){
         if(game_event.button.button == SDL_BUTTON_LEFT  ) {mouse->left_down   = true; mouse->left_hold = true; }
         if(game_event.button.button == SDL_BUTTON_MIDDLE) {mouse->middle_down = true; mouse->middle_hold = true; }
@@ -273,7 +276,7 @@ namespace pmgd {
         if(game_event.button.button == SDL_BUTTON_MIDDLE) {mouse->middle_up = true; mouse->middle_hold = false; }
         if(game_event.button.button == SDL_BUTTON_RIGHT ) {mouse->right_up  = true; mouse->right_hold = false; }
       }
-      locker = true; // lock mouse for any other mouse events in this tick
+      mouse_locker = true; // lock mouse for any other mouse events in this tick
     }
 
     void UpdateMouse(){
@@ -287,7 +290,7 @@ namespace pmgd {
 
     void UpdateKeyboard(){
       kstate = SDL_GetKeyboardState(NULL);
-      for(int key = KSTART; key < KEND; key++){
+      for(int key = SDL_KSTART; key < SDL_KEND; key++){
         keyboard->Update(key, kstate[key]);
       }
     }
@@ -304,6 +307,46 @@ namespace pmgd {
     }
   };
 
+  // ======= Functions for reading text files ====================================================================
+  std::string read_txt_file_sdl(const std::string & path){
+    SDL_RWops *file = SDL_RWFromFile(path.c_str(), "r");
+    if( file == NULL ) {
+      msg_err("read_text_files(): cant open file", path, "return empty string");
+      return "";
+    }
+
+    Sint64 res_size = SDL_RWsize(file);
+    char* res = (char*)malloc(res_size + 1);
+
+    Sint64 nb_read_total = 0, nb_read = 1;
+    char* buf = res;
+    while (nb_read_total < res_size && nb_read != 0) {
+      nb_read = SDL_RWread(file, buf, 1, (res_size - nb_read_total));
+      nb_read_total += nb_read;
+      buf += nb_read;
+    }
+    SDL_RWclose(file);
+    if (nb_read_total != res_size) {
+      free(res);
+      msg_err("read_text_files(): error during reading the file", path);
+    }
+
+    res[nb_read_total] = '\0';
+    std::string str = std::string(res);
+    free(res);
+    return str;
+  }
+
+  int write_txt_file_sdl(const std::string & path, const std::string & data){
+    return PM_SUCCESS;
+  }
+
+  class IoTxtSDL : public IoTxt {
+    public:
+    virtual std::string read(const std::string & path){ return read_txt_file_sdl(path); };
+    virtual int write(const std::string & path, const std::string & data){ return write_txt_file_sdl(path, data); };
+  };
+  
 };
 
 #endif

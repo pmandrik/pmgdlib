@@ -4,6 +4,19 @@
 #include "tests_time.h"
 #include "tests_pipeline.h"
 
+#include "pmgdlib_core.h"
+#include "pmgdlib_factory.h"
+
+using namespace pmgd;
+using namespace std;
+
+TEST(pmlib_data, load_txt) {
+  BackendOptions bo;
+  Backend bk = get_backend(bo);
+  std::string txt_data = bk.io->txt_read("/any/path");
+  EXPECT_EQ(txt_data, "dummy data");
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

@@ -7,11 +7,13 @@
 
 #include "pmgdlib_defs.h"
 #include "pmgdlib_msg.h"
+#include "pmgdlib_math.h"
 #include <stack>
 
 namespace pmgd {
 
-  /*
+  class Core {};
+
   // mouse base class
   class Mouse {
     public:
@@ -75,6 +77,7 @@ namespace pmgd {
         //! TODO move to logical keyboard from physical
         //! update keyboard in the implementation
         //! call this to update some regular keyboard events
+        /*
         hor = check_sign(Holded(key::D) + Holded(key::RIGHT) - Holded(key::A) - Holded(key::LEFT));
         ver = check_sign(Holded(key::W) + Holded(key::UP) - Holded(key::S) - Holded(key::DOWN));
         actz = Pressed(key::Z) + Pressed(key::K) + Pressed(key::RETURN) + Pressed(key::SPACE);
@@ -83,6 +86,7 @@ namespace pmgd {
         ver_pressed = check_sign(Pressed(key::W) + Pressed(key::UP) - Pressed(key::S) - Pressed(key::DOWN));
         exit = Pressed(key::ESCAPE);
         screenshoot = Holded(key::KP_0);
+        */
       }
 
       inline bool Pressed(int key){ return keyboard_pressed[key]; }
@@ -94,11 +98,24 @@ namespace pmgd {
       bool keyboard_pressed[232], keyboard_holded[232], keyboard_raised[232];
   };
 
-  class KeyboardLogical {
+  // io related items =====================================================================================================
+  class IoTxt {
+    public:
+    virtual std::string read(const std::string & path) {return "dummy data";};
+    virtual int write(const std::string & path, const std::string & data) {return PM_SUCCESS;};
+    virtual ~IoTxt(){};
   };
-  */
 
-  // drawing related items
+  class IO {
+    public:
+    std::shared_ptr<IoTxt> txt_imp;
+
+    std::string txt_read(const std::string & path){
+      return txt_imp->read( path );
+    }
+  };
+
+  // drawing related items =================================================================================================
   class Texture : public BaseMsg {
     /// base abstract texture class
     public:
@@ -142,7 +159,7 @@ namespace pmgd {
 
       void AddTexTile(const std::string & key, const v2 & tp, const v2 & ts){
         if(GetTexTile(key)) return;
-        atlas[ key ] = TexTile(tp, ts);
+        atlas[key] = TexTile(tp, ts);
       }
 
       std::string GenItemKey(int x, int y) const {
@@ -234,38 +251,64 @@ namespace pmgd {
   class FrameBuffer : public BaseMsg {
     /// frame buffer is a texture + depth buffer stored at GPU and with fast GPU access
     protected:
-    rgb clear_color = rgb(0,1,1);
+    rgb clear_color = rgb(0, 255, 255);
     int size_x, size_y;
 
     public:
-      FrameBuffer(int size_x, int size_y){
-        this->size_x = size_x;
-        this->size_y = size_y;
-      };
+    FrameBuffer(int size_x, int size_y){
+      this->size_x = size_x;
+      this->size_y = size_y;
+    };
 
-      void SetClearColor(rgb color){ clear_color = color; }
+    void SetClearColor(rgb color){ clear_color = color; }
 
-      virtual ~FrameBuffer(){};
+    virtual ~FrameBuffer(){};
 
-      //! set this buffer as target
-      virtual void Target() = 0;
+    //! set this buffer as target
+    virtual void Target() = 0;
 
-      //! unset this buffer as target
-      virtual void Untarget() = 0;
+    //! unset this buffer as target
+    virtual void Untarget() = 0;
 
-      //! fill buffer with some 0 data
-      virtual void Clear() = 0;
+    //! fill buffer with some 0 data
+    virtual void Clear() = 0;
 
-      //! same as Clear
-      void Clean(){ Clear(); };
+    //! same as Clear
+    void Clean(){ Clear(); };
 
-      //! bind frame buffer texture, so can be used to draw
-      virtual void BindTexture() = 0;
+    //! bind frame buffer texture, so can be used to draw
+    virtual void BindTexture() = 0;
 
-      //! unbind frame buffer texture
-      virtual void UnbindTexture() = 0;
+    //! unbind frame buffer texture
+    virtual void UnbindTexture() = 0;
+
+    v2 GetSize() const { return v2(size_x, size_y); };
   };
 
+  class DoubleFrameBuffer {
+    public:
+    std::shared_ptr<FrameBuffer> active, back;
+
+    public :
+    DoubleFrameBuffer(std::shared_ptr<FrameBuffer> fb1, std::shared_ptr<FrameBuffer> fb2){
+      active = fb1;
+      back   = fb2;
+    }
+
+    void Target(){ active->Target(); }
+    void Untarget(){ active->Untarget(); }
+    void Clear(){ active->Clear(); }
+    void BindTexture(){ active->BindTexture(); }
+    void UnbindTexture(){ active->BindTexture(); }
+
+    void BindBackTexture(){ back->BindTexture(); }
+    void UnbindBackTexture(){ back->BindTexture(); }
+    void Flip(){ swap(active, back); }
+
+    v2 GetSize() const { return active->GetSize(); };
+  };
+
+  
 };
 
 #endif

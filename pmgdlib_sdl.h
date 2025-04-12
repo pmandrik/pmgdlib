@@ -343,8 +343,8 @@ namespace pmgd {
 
   class IoTxtSDL : public IoTxt {
     public:
-    virtual std::string read(const std::string & path){ return read_txt_file_sdl(path); };
-    virtual int write(const std::string & path, const std::string & data){ return write_txt_file_sdl(path, data); };
+    virtual std::string Read(const std::string & path){ return read_txt_file_sdl(path); };
+    virtual int Write(const std::string & path, const std::string & data){ return write_txt_file_sdl(path, data); };
   };
   
 };

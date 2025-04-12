@@ -6,15 +6,10 @@ TEST_SDL = true
 TEST_GL = true
 TEST_VULKAN = true
 
-test_inc = include_directories('../')
-cpp = meson.get_compiler('cpp')
-
 gtest = dependency('gtest', main: true, required: false)
 if not gtest.found()
   error('MESON_SKIP_TEST: gtest not installed.')
 endif
-
-core_deps = [test_inc]
 
 # use spdlog
 if false
@@ -22,7 +17,18 @@ if false
   core_deps += [spdlog_inc]
 endif
 
-all_testes = executable('all_tests', 'tests_main.cpp', include_directories: core_deps, dependencies: gtest)
+# use tinyxml2
+if USE_TINYXML2
+  core_deps += [tinyxml2_inc]
+endif
+
+all_testes = executable('all_tests', 
+  'tests_main.cpp', 
+  include_directories: core_deps, 
+  dependencies: gtest, 
+  link_with : core_links
+)
+
 test('gtest test', all_testes)
 
 if TEST_SDL
@@ -50,7 +56,11 @@ if TEST_SDL
 
   sdl_tests = ['test_sdl_core']
   foreach sdl_test : sdl_tests
-    test_exec = executable(sdl_test, sdl_test + '.cpp', include_directories: core_deps + [sdl2_inc], dependencies: [sdl2, gtest])
+    test_exec = executable(sdl_test, sdl_test + '.cpp', 
+      include_directories: core_deps + [sdl2_inc], 
+      dependencies: [sdl2, gtest], 
+      link_with : core_links
+    )
     test(sdl_test, test_exec)
   endforeach
 
@@ -59,7 +69,11 @@ if TEST_SDL
     gl = dependency('gl', main: true, required: true)
     sdl_tests = ['test_sdl_gl', 'test_sdl_gl_pmgdlib']
     foreach sdl_test : sdl_tests
-      test_exec = executable(sdl_test, sdl_test + '.cpp', include_directories: core_deps + [sdl2_inc], dependencies: [sdl2, gtest, gl])
+      test_exec = executable(sdl_test, sdl_test + '.cpp', 
+        include_directories: core_deps + [sdl2_inc], 
+        dependencies: [sdl2, gtest, gl], 
+        link_with : core_links
+      )
       test(sdl_test, test_exec)
     endforeach
   endif
@@ -69,7 +83,12 @@ if TEST_SDL
     vulkan = dependency('vulkan', main: true, required: true)
     sdl_tests = ['test_sdl_vulkan']
     foreach sdl_test : sdl_tests
-      test_exec = executable(sdl_test, sdl_test + '.cpp', include_directories: core_deps + [sdl2_inc], dependencies: [sdl2, gtest, vulkan])
+      test_exec = executable(sdl_test, 
+        sdl_test + '.cpp', 
+        include_directories: core_deps + [sdl2_inc], 
+        dependencies: [sdl2, gtest, vulkan],
+        link_with : core_links
+      )
       test(sdl_test, test_exec)
     endforeach
   endif

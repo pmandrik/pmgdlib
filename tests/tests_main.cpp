@@ -3,6 +3,7 @@
 #include "tests_string.h"
 #include "tests_time.h"
 #include "tests_pipeline.h"
+#include "tests_config.h"
 
 #include "pmgdlib_core.h"
 #include "pmgdlib_factory.h"
@@ -13,7 +14,7 @@ using namespace std;
 TEST(pmlib_data, load_txt) {
   BackendOptions bo;
   Backend bk = get_backend(bo);
-  std::string txt_data = bk.io->txt_read("/any/path");
+  std::string txt_data = bk.io->ReadTxt("/any/path");
   EXPECT_EQ(txt_data, "dummy data");
 }
 

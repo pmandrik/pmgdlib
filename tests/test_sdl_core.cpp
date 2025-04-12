@@ -22,7 +22,7 @@ TEST(pmlib_data, load_txt) {
   BackendOptions bo;
   bo.io = "SDL";
   Backend bk = get_backend(bo);
-  std::string txt_data = bk.io->txt_read(path);
+  std::string txt_data = bk.io->ReadTxt(path);
   EXPECT_EQ(txt_data, "test data");
 }
 

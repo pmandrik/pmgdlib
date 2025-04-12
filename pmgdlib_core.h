@@ -101,8 +101,8 @@ namespace pmgd {
   // io related items =====================================================================================================
   class IoTxt {
     public:
-    virtual std::string read(const std::string & path) {return "dummy data";};
-    virtual int write(const std::string & path, const std::string & data) {return PM_SUCCESS;};
+    virtual std::string Read(const std::string & path) {return "dummy data";};
+    virtual int Write(const std::string & path, const std::string & data) {return PM_SUCCESS;};
     virtual ~IoTxt(){};
   };
 
@@ -110,8 +110,8 @@ namespace pmgd {
     public:
     std::shared_ptr<IoTxt> txt_imp;
 
-    std::string txt_read(const std::string & path){
-      return txt_imp->read( path );
+    std::string ReadTxt(const std::string & path){
+      return txt_imp->Read( path );
     }
   };
 
@@ -285,7 +285,7 @@ namespace pmgd {
     v2 GetSize() const { return v2(size_x, size_y); };
   };
 
-  class DoubleFrameBuffer {
+  class DoubleFrameBuffer : public BaseMsg {
     public:
     std::shared_ptr<FrameBuffer> active, back;
 

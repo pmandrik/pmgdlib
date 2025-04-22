@@ -8,7 +8,7 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 
-#include <pmgdlib_core.h>
+#include "pmgdlib_core.h"
 
 namespace pmgd {
 

@@ -9,6 +9,7 @@
 #include "pmgdlib_math.h"
 #include "pmgdlib_image.h"
 #include "pmgdlib_core.h"
+#include "pmgdlib_config.h"
 
 #include <GLES3/gl3.h>
 
@@ -209,6 +210,7 @@ namespace pmgd {
   };
 
   GLuint image_type_to_gl(int type){
+    if(type == image_type::UNSIGNED_CHAR) return GL_UNSIGNED_BYTE;
     if(type == image_type::UNSIGNED_INT) return GL_UNSIGNED_INT;
     if(type == image_type::FLOAT) return GL_FLOAT;
     return image_type::UNDEFINED;
@@ -449,6 +451,30 @@ namespace pmgd {
         } else {
           msg_warning("index (", index, ") must be in range [0, 2]");
         }
+    }
+
+    virtual int AddUniformsAuto(){
+      msg_debug("add uniforms auto ...");
+      
+      GLint numActiveAttribs = 0;
+      GLint numActiveUniforms = 0;
+      glGetProgramiv(program_id, GL_ACTIVE_ATTRIBUTES, &numActiveAttribs);
+      glGetProgramiv(program_id, GL_ACTIVE_UNIFORMS, &numActiveUniforms);
+
+      std::vector<GLchar> nameData(256);
+      for(int unif = 0; unif < numActiveUniforms; ++unif) {
+        GLint arraySize = 0;
+        GLenum type = 0;
+        GLsizei actualLength = 0;
+        glGetActiveUniform(program_id, unif, nameData.size(), &actualLength, &arraySize, &type, &nameData[0]);
+        std::string name((char*)&nameData[0], actualLength - 1);
+
+        int status = AddUniform(name);
+        if(not status) return status;
+      }
+
+      msg_debug("add uniforms auto ... ok");
+      return PM_SUCCESS;
     }
   };
 
@@ -786,6 +812,20 @@ glClear
 glVertex3f
 */
 
+  // ======= object maker ====================================================================
+  class AccelFactoryGL : public AccelFactory {
+    public:
+    virtual std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img){ return make_shared<TextureGl>(img); }
+    virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt){
+      std::shared_ptr<ShaderGl> shader = std::make_shared<ShaderGl>();
+      int status;
+      if((status = shader->LoadVert(vert_txt)) != PM_SUCCESS) return nullptr;
+      if((status = shader->LoadFrag(frag_txt)) != PM_SUCCESS) return nullptr;
+      if((status = shader->CreateProgram()) != PM_SUCCESS) return nullptr;
+      if((status = shader->AddUniformsAuto()) != PM_SUCCESS) return nullptr;
+      return shader;
+    }
+  };
 };
 
 #endif

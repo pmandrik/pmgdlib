@@ -15,7 +15,10 @@ namespace pmgd {
     PM_ERROR_500 = 500,
     PM_ERROR_INCORRECT_ARGUMENTS,
     PM_ERROR_CLASS_ATTRIBUTES,
-    PM_ERROR_GL
+    PM_ERROR_SCHEMA,
+    PM_ERROR_IO,
+    PM_ERROR_GL,
+    PM_ERROR_STB,
   };
 
   namespace image_format {
@@ -32,6 +35,7 @@ namespace pmgd {
   namespace image_type {
     enum  {
       UNDEFINED = -1,
+      UNSIGNED_CHAR,
       UNSIGNED_INT,
       FLOAT,
     };

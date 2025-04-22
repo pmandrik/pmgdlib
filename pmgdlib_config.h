@@ -3,6 +3,11 @@
 #ifndef PMLIB_CONFIG_HH
 #define PMLIB_CONFIG_HH 1
 
+#include <string>
+#include <functional>
+#include <vector>
+#include <map>
+
 #include "pmgdlib_std.h"
 #include "pmgdlib_msg.h"
 #include "pmgdlib_core.h"
@@ -63,11 +68,11 @@ namespace pmgd {
     }
 
     /// Get ConfigItem from Data
-    vector<ConfigItem> Get(std::string name) const {
+    std::vector<ConfigItem> Get(std::string name) const {
       return map_get(data, name, std::vector<ConfigItem>());
     }
 
-    vector<std::string> GetAttrsFromData(std::string name, std::string attr) const {
+    std::vector<std::string> GetAttrsFromData(std::string name, std::string attr) const {
       /// Get ConfigItem from Data
       std::vector<std::string> answer;
       std::vector<ConfigItem> rels = Get(name);
@@ -77,22 +82,80 @@ namespace pmgd {
       return answer;
     }
 
-    void FillHrString(std::string & hr, int n_tabs = 0) const {
+    void FillHrString(std::string & hr, int n_tabs = 0, int max_depth = -1) const {
       std::string ntabs = std::string(n_tabs, ' ');
       std::string ntabs2 = std::string(n_tabs+2, ' ');
       hr += ntabs + "attributes:\n";
       for(auto iter : attributes)
         hr += ntabs2 + " " + iter.first + " " + iter.second + "\n";
 
-      hr += ntabs + "child data:";
+      hr += ntabs + "child data:\n";
+      if(max_depth == 0){
+        hr += "...";
+        return;
+      }
+
       for(auto iter : data){
         hr += ntabs2 + " " + iter.first + ":";
-        for(auto item : iter.second) item.FillHrString(hr, n_tabs + 2);
+        for(auto item : iter.second) item.FillHrString(hr, n_tabs + 2, max_depth-1);
       }
+    }
+
+    std::string GetShortStr(void) const {
+      std::string hr;
+      FillHrString(hr, 0, 0);
+      return hr;
+    }
+  };
+
+  struct ConfigSchema {
+    std::vector <std::string> mandatory;
+
+    ConfigSchema(std::vector <std::string> mandatory){
+      this->mandatory = mandatory;
     }
   };
 
   class Config : public ConfigItem {
+    public:
+    int Validate(const ConfigSchema & schema, const ConfigItem & item) const {
+      for(auto mand : schema.mandatory){
+        std::string val = item.Attribute(mand);
+        if(val.size() == 0){
+          std::string str = item.GetShortStr();
+          msg_warning("item (", str, ") has no mandatory attribute \"" + mand + "\"" );
+          return PM_ERROR_SCHEMA;
+        }
+      }
+
+      return PM_SUCCESS;
+    }
+
+    void ProcessItems(std::string key, const ConfigSchema & schema, std::function<int(ConfigItem&)> proccessor) const {
+      std::vector<ConfigItem> items = Get(key);
+      for(int i = 0, i_max = items.size(); i < i_max; i++){
+        int valid = Validate(schema, items[i]);
+        if(valid != PM_SUCCESS){
+          msg_warning("item = ", key, i, "invalid schema = ", valid);
+          continue;
+        }
+
+        int status = proccessor(items[i]);
+        if(status != PM_SUCCESS){
+          msg_warning("item = ", key, i, "processed with error code = ", status);
+        }
+      }
+    }
+
+    std::string ProcessTemplate(std::string raw) const {
+      /// TODO
+      return raw;
+    }
+
+    std::string IdFromPath(std::string & path) const {
+      /// TODO
+      return path;
+    }
   };
 
   // ======= config loading ====================================================================

@@ -5,6 +5,7 @@
 TEST_SDL = true
 TEST_GL = true
 TEST_VULKAN = true
+USE_STB = true
 
 gtest = dependency('gtest', main: true, required: false)
 if not gtest.found()
@@ -20,6 +21,10 @@ endif
 # use tinyxml2
 if USE_TINYXML2
   core_deps += [tinyxml2_inc]
+endif
+
+if USE_STB
+  core_deps += [stb_includes]
 endif
 
 all_testes = executable('all_tests', 

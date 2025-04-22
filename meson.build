@@ -50,5 +50,8 @@ if USE_TINYXML2
   core_links += [lib_tinyxml2]
 endif
 
+# stb
+stb_includes = '../external/stb/.'
+
 subdir('tests')
 subdir('apps')

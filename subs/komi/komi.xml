@@ -10,7 +10,7 @@
 <texture id="blood"  image_id="blood.png" image_path="/home/me/my/project/GAME_ABOUT_FRIENDS/friends_dir/c_blood_data.png"/>
 
 <!-- shaders -->
-<shader id="shader_c_back" vert="Data/default_shaders/def.vert" frag="Data/default_shaders/shader_c_back.frag" imp="GL" kind="SLa">
+<shader id="shader_c_back" vert="Data/default_shaders/def.vert" frag="Data/default_shaders/shader_c_back.frag">
   <var value="0.0000"/> <var value="0.0000"/> <var value="0.0000"/> <var value="0.00000"/> <var value="0.00000"/> 
 </shader>
 

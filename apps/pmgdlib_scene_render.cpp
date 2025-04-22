@@ -1,6 +1,7 @@
 #include <cxxopts.hpp>
 
 #include <pmgdlib_msg.h>
+#include <pmgdlib_factory.h>
 
 using namespace std;
 using namespace pmgd;
@@ -14,13 +15,13 @@ int main(int argc, char** argv){
   ;
 
   auto result = options.parse(argc, argv);
-  if(result.count("help") or not result.count("config") or not cfg_path.size()){
+  if(result.count("help") or not result.count("config")){
     std::cout << options.help() << std::endl;
     exit(0);
   }
 
   // get config
-  string cfg_path = result["config"].as<std::string>();
+  std::string cfg_path = result["config"].as<std::string>();
 
   /// read cfg txt
   BackendOptions bo;
@@ -30,11 +31,10 @@ int main(int argc, char** argv){
 
   /// load cfg from xml
   ConfigLoader cl;
-  std::string raw_cfg = cl.LoadXmlCfg();
   Config cfg = cl.LoadXmlCfg(cfg_raw);
 
   /// Parce scene definition
-  
+
 
   /// Load images
   /// Load shaders

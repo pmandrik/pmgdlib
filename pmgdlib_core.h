@@ -106,12 +106,29 @@ namespace pmgd {
     virtual ~IoTxt(){};
   };
 
+  class Image;
+  class IoImage {
+    public:
+    virtual std::shared_ptr<Image> Read(const std::string & path) {return nullptr;};
+    virtual int Write(const std::string & path, std::shared_ptr<Image> image) {return PM_SUCCESS;};
+    virtual ~IoImage(){};
+  };
+
   class IO {
     public:
     std::shared_ptr<IoTxt> txt_imp;
+    std::shared_ptr<IoImage> img_imp;
 
     std::string ReadTxt(const std::string & path){
-      return txt_imp->Read( path );
+      return txt_imp->Read(path);
+    }
+
+    std::shared_ptr<Image> ReadImage(const std::string & path){
+      return img_imp->Read(path);
+    }
+
+    int WriteImage(const std::string & path, std::shared_ptr<Image> image){
+      return img_imp->Write(path, image);
     }
   };
 
@@ -305,10 +322,16 @@ namespace pmgd {
     void UnbindBackTexture(){ back->BindTexture(); }
     void Flip(){ swap(active, back); }
 
-    v2 GetSize() const { return active->GetSize(); };
+    v2 GetSize() const {return active->GetSize();};
   };
 
-  
+  class AccelFactory {
+    /// accelerated class object maker
+    public:
+    virtual std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img) {return nullptr;}
+    virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt) {return nullptr;}
+    virtual ~AccelFactory() {};
+  };
 };
 
 #endif

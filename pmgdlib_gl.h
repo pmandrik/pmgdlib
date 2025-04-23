@@ -815,6 +815,31 @@ glVertex3f
   // ======= object maker ====================================================================
   class AccelFactoryGL : public AccelFactory {
     public:
+    virtual int InitAccel(const SysOptions & opts){
+      // Alpha
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+      //glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA );
+      glEnable(GL_ALPHA_TEST);
+      glAlphaFunc(GL_GREATER, 0);
+
+      // Depth
+      glEnable(GL_DEPTH_TEST);
+      glDepthMask(GL_TRUE);
+      glDepthFunc(GL_LEQUAL);
+      glDepthRange(0.0, 1.0);
+
+      // clear screen
+      glViewport(0, 0, opts.screen_width, opts.screen_height);
+      glClearColor(0., 0.5, 0.5, 1.);
+      glClear(GL_COLOR_BUFFER_BIT);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      //SDL_GL_SwapWindow(window);
+      //glClearColor(0., 0.5, 0.5, 1.);
+      //glClear(GL_COLOR_BUFFER_BIT);
+      //glClear(GL_DEPTH_BUFFER_BIT);
+      return PM_SUCCESS;
+    }
     virtual std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img){ return make_shared<TextureGl>(img); }
     virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt){
       std::shared_ptr<ShaderGl> shader = std::make_shared<ShaderGl>();

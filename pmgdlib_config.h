@@ -45,6 +45,11 @@ namespace pmgd {
       return PM_SUCCESS;
     }
 
+    /// check if has attribute
+    bool HasAttribute(std::string name) const {
+      return attributes.find(name) != attributes.end();
+    }
+
     /// Get Attribute as std::string, int, float
     std::string Attribute(std::string name, std::string def = "") const {
       return map_get( attributes, name, def );

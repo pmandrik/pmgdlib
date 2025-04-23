@@ -116,8 +116,8 @@ namespace pmgd {
 
   class IO {
     public:
-    std::shared_ptr<IoTxt> txt_imp;
-    std::shared_ptr<IoImage> img_imp;
+    std::shared_ptr<IoTxt> txt_imp = std::make_shared<IoTxt>();
+    std::shared_ptr<IoImage> img_imp = std::make_shared<IoImage>();
 
     std::string ReadTxt(const std::string & path){
       return txt_imp->Read(path);
@@ -325,9 +325,35 @@ namespace pmgd {
     v2 GetSize() const {return active->GetSize();};
   };
 
+  struct SysOptions {
+    // core options
+    int screen_width = 640;
+    int screen_height = 480;
+    std::string multimedia_library;
+    std::string accelerator;
+    std::string io;
+    std::string img;
+
+    // aliases
+    bool gl;
+
+    void Finilize(){
+      gl = accelerator == "GL";
+    }
+  };
+
+  class Window {};
+
+  class SysFactory {
+    public:
+    virtual std::shared_ptr<Window> CreateWindow(const SysOptions & opts) {return nullptr;}
+    virtual ~SysFactory() {};
+  };
+
   class AccelFactory {
     /// accelerated class object maker
     public:
+    virtual int InitAccel(const SysOptions & opts){return PM_SUCCESS;}
     virtual std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img) {return nullptr;}
     virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt) {return nullptr;}
     virtual ~AccelFactory() {};

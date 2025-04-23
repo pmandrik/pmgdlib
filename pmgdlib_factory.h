@@ -18,51 +18,46 @@ namespace pmgd {
 
   class Factory {
     public:
-    std::shared_ptr<AccelFactory> accel_imp  = std::make_shared<AccelFactory>();
+    std::shared_ptr<AccelFactory> accel_imp = std::make_shared<AccelFactory>();
+    std::shared_ptr<SysFactory> sys_imp = std::make_shared<SysFactory>();
+
+    int InitAccel(const SysOptions & opts){ return accel_imp->InitAccel(opts);}
     std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img){ return accel_imp->MakeTexture(img); }
     std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt){
       return accel_imp->MakeShader(vert_txt, frag_txt);
     }
+
+    std::shared_ptr<Window> CreateWindow(const SysOptions & opts){return sys_imp->CreateWindow(opts);}
   };
 
   class Backend {
     public:
-    std::shared_ptr<IO> io;
-    std::shared_ptr<Factory> factory;
-  };
-
-  struct BackendOptions {
-    std::string accelerator;
-    std::string io;
-    std::string img;
-  };
-
-  Backend get_backend(BackendOptions options){
     std::shared_ptr<IO> io = std::make_shared<IO>();
-    io->txt_imp = std::make_shared<IoTxt>();
-
     std::shared_ptr<Factory> factory = std::make_shared<Factory>();
-    factory->accel_imp  = std::make_shared<AccelFactory>();
+  };
 
+  Backend get_backend(const SysOptions & options){
     Backend back;
-    back.io = io;
-    back.factory = factory;
 
     #ifdef USE_GL
     if(options.accelerator == "GL"){
-      factory->accel_imp = std::make_shared<AccelFactoryGL>();
+      back.factory->accel_imp = std::make_shared<AccelFactoryGL>();
     }
     #endif
 
     #ifdef USE_SDL
     if(options.io == "SDL"){
-      io->txt_imp = std::make_shared<IoTxtSDL>();
+      back.io->txt_imp = std::make_shared<IoTxtSDL>();
+    }
+
+    if(options.multimedia_library == "SDL"){
+      back.factory->sys_imp = std::make_shared<SysFactorySDL>();
     }
     #endif
 
     #ifdef USE_STB
     if(options.img == "STB"){
-      io->img_imp = std::make_shared<IoImageStb>();
+      back.io->img_imp = std::make_shared<IoImageStb>();
     }
     #endif
 
@@ -99,6 +94,17 @@ namespace pmgd {
   };
 
   class SceneDataLoader : public BaseMsg {
+    int LoadSysopt(const ConfigItem & cfg){
+      std::shared_ptr<SysOptions> sysopt = dc.Get<SysOptions>("SysOptions");
+      if(cfg.HasAttribute("screen_width")) sysopt->screen_width = cfg.AttributeI("screen_width");
+      if(cfg.HasAttribute("screen_height")) sysopt->screen_height = cfg.AttributeI("screen_height");
+      if(cfg.HasAttribute("multimedia_library")) sysopt->multimedia_library = cfg.Attribute("multimedia_library");
+      if(cfg.HasAttribute("accel")) sysopt->accelerator = cfg.Attribute("accelerator");
+      if(cfg.HasAttribute("io_backend")) sysopt->io = cfg.Attribute("io_backend");
+      if(cfg.HasAttribute("img_backend")) sysopt->img = cfg.Attribute("img_backend");
+      return PM_SUCCESS;
+    }
+
     int LoadImage(std::string id, std::string path){
       msg_debug("load image, id = ", id, "path = ", path);
   
@@ -177,6 +183,13 @@ namespace pmgd {
     }
 
     int Load(Config & cfg){
+      std::shared_ptr<SysOptions> sysopt = std::make_shared<SysOptions>();
+      dc.Add("SysOptions", sysopt);
+
+      ConfigSchema sysopt_schema({});
+      std::function<int(ConfigItem&)> load_sysopt = [this](const ConfigItem & c) { return this->LoadSysopt(c); };
+      cfg.ProcessItems("sys", sysopt_schema, load_sysopt);
+
       ConfigSchema texture_schema({"id"});
       std::function<int(ConfigItem&)> load_texture = [this](const ConfigItem & c) { return this->LoadTexture(c); };
       cfg.ProcessItems("texture", texture_schema, load_texture);

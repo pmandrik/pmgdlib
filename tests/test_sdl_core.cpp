@@ -19,7 +19,7 @@ TEST(sdl_core, keyboard) {
 
 TEST(pmlib_data, load_txt) {
   std::string path = "../data/test.txt";
-  BackendOptions bo;
+  SysOptions bo;
   bo.io = "SDL";
   Backend bk = get_backend(bo);
   std::string txt_data = bk.io->ReadTxt(path);

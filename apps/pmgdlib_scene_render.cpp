@@ -24,7 +24,7 @@ int main(int argc, char** argv){
   std::string cfg_path = result["config"].as<std::string>();
 
   /// read cfg txt
-  BackendOptions bo;
+  SysOptions bo;
   bo.io = "SDL";
   Backend bk = get_backend(bo);
   std::string cfg_raw = bk.io->ReadTxt(cfg_path);

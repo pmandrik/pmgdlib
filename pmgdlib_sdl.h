@@ -346,7 +346,33 @@ namespace pmgd {
     virtual std::string Read(const std::string & path){ return read_txt_file_sdl(path); };
     virtual int Write(const std::string & path, const std::string & data){ return write_txt_file_sdl(path, data); };
   };
+
+  class WindowSDL : public Window {
+    public:
+    SDL_Window * window;
+    SDL_GLContext gl_context;
+  };
   
+  class SysFactorySDL: public SysFactory {
+    public:
+    virtual std::shared_ptr<Window> CreateWindow(const SysOptions & opts) {
+      std::shared_ptr<WindowSDL> window = std::make_shared<WindowSDL>(); 
+
+      int window_flag = 0;
+      if(opts.gl) 
+        window_flag |= SDL_WINDOW_OPENGL;
+
+      window->window = SDL_CreateWindow("SDL2", 
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+        opts.screen_width, opts.screen_height, window_flag);
+      
+      if(opts.gl)
+        window->gl_context = SDL_GL_CreateContext(window->window);
+
+      return window;
+    }
+  };
+
 };
 
 #endif

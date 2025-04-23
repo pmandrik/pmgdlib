@@ -9,7 +9,7 @@
 using namespace pmgd;
 
 TEST(pmlib_data, io_load_dummy) {
-  BackendOptions bo;
+  SysOptions bo;
   Backend bk = get_backend(bo);
   std::string txt_data = bk.io->ReadTxt("/any/path");
   EXPECT_EQ(txt_data, "dummy data");
@@ -35,7 +35,7 @@ TEST(pmlib_data, data_container) {
 
 #ifdef USE_STB
 TEST(pmlib_data, stb) {
-  BackendOptions bo;
+  SysOptions bo;
   bo.img = "STB";
   Backend bk = get_backend(bo);
 

@@ -1,7 +1,8 @@
 <!-- <sys screen_width="4800" screen_height="2700"/>  -->
 <sys screen_width="1600" screen_height="900"/> 
 <!-- <sys screen_width="1800" screen_height="1200"/> -->
-<sys multimedia_library="SDL" render_interface="OpenGL"/>
+<sys io_backend="SDL" img_backend="STB"/> 
+<sys multimedia_library="SDL" accelerator="OpenGL"/>
 
 <!-- textures -->
 <texture id="back" image_id="back_c_done.png" image_path="/home/me/my/project/GAME_ABOUT_FRIENDS/friends_dir/back_c_done.png"/>

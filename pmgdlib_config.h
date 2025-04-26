@@ -217,6 +217,20 @@ namespace pmgd {
       txml.ToCfg(cfg);
       return cfg;
     }
+
+    SysOptions GetSysOptions(const Config & cfg){
+      SysOptions sysopt;
+      std::vector<ConfigItem> items = cfg.Get("sys");
+      for(auto item : items){
+        if(item.HasAttribute("screen_width")) sysopt.screen_width = item.AttributeI("screen_width");
+        if(item.HasAttribute("screen_height")) sysopt.screen_height = item.AttributeI("screen_height");
+        if(item.HasAttribute("multimedia_library")) sysopt.multimedia_library = item.Attribute("multimedia_library");
+        if(item.HasAttribute("accelerator")) sysopt.accelerator = item.Attribute("accelerator");
+        if(item.HasAttribute("io_backend")) sysopt.io = item.Attribute("io_backend");
+        if(item.HasAttribute("img_backend")) sysopt.img = item.Attribute("img_backend");
+      }
+      return sysopt;
+    }
   };
 
 };

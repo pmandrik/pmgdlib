@@ -467,7 +467,7 @@ namespace pmgd {
         GLenum type = 0;
         GLsizei actualLength = 0;
         glGetActiveUniform(program_id, unif, nameData.size(), &actualLength, &arraySize, &type, &nameData[0]);
-        std::string name((char*)&nameData[0], actualLength - 1);
+        std::string name((char*)&nameData[0], actualLength);
 
         int status = AddUniform(name);
         if(not status) return status;

@@ -72,7 +72,7 @@ if TEST_SDL
   # gl tests
   if TEST_GL
     gl = dependency('gl', main: true, required: true)
-    sdl_tests = ['test_sdl_gl', 'test_sdl_gl_pmgdlib']
+    sdl_tests = ['test_sdl_gl', 'test_sdl_gl_pmgdlib', 'test_gl_factory']
     foreach sdl_test : sdl_tests
       test_exec = executable(sdl_test, sdl_test + '.cpp', 
         include_directories: core_deps + [sdl2_inc], 

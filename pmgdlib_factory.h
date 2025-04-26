@@ -2,6 +2,7 @@
 #ifndef PMGDLIB_FACTORY_HH
 #define PMGDLIB_FACTORY_HH 1
 
+#include "pmgdlib_string.h"
 #include "pmgdlib_core.h"
 #include "pmgdlib_config.h"
 #include "pmgdlib_image.h"
@@ -37,30 +38,38 @@ namespace pmgd {
   };
 
   Backend get_backend(const SysOptions & options){
+    int verbose_lvl = msg_verbose_lvl();
+
+    msg_debug("Factory backend start ...");
     Backend back;
 
     #ifdef USE_GL
     if(options.accelerator == "GL"){
+      msg_debug("use GL accelerator backend");
       back.factory->accel_imp = std::make_shared<AccelFactoryGL>();
     }
     #endif
 
     #ifdef USE_SDL
     if(options.io == "SDL"){
+      msg_debug("use SDL IO backend");
       back.io->txt_imp = std::make_shared<IoTxtSDL>();
     }
 
     if(options.multimedia_library == "SDL"){
+      msg_debug("use SDL multimedia backend");
       back.factory->sys_imp = std::make_shared<SysFactorySDL>();
     }
     #endif
 
     #ifdef USE_STB
     if(options.img == "STB"){
+      msg_debug("use STB image IO backend");
       back.io->img_imp = std::make_shared<IoImageStb>();
     }
     #endif
 
+    msg_debug("Factory backend ok ...");
     return back;
   };
 
@@ -74,7 +83,7 @@ namespace pmgd {
       if( not name.size() ) return nullptr;
       std::unordered_map<std::string, std::shared_ptr<void>>::const_iterator ptr = data.find(name);
       if(ptr == data.end()) {
-        msg_warning("can't find", name, ", return nullptr");
+        msg_warning("can't find", quote(name), ", return nullptr");
         return nullptr;
       }
       return std::static_pointer_cast<T>(ptr->second);
@@ -84,29 +93,18 @@ namespace pmgd {
     int Add(const std::string & name, std::shared_ptr<T> obj){
       std::unordered_map<std::string, std::shared_ptr<void>>::const_iterator ptr = data.find(name);
       if(ptr != data.end()) {
-        msg_warning("can't add duplicate", name);
+        msg_warning("can't add duplicate", quote(name));
         return PM_ERROR_DUPLICATE;
       }
-      msg_debug("add", name);
+      msg_debug("add", quote(name));
       data[name] = std::static_pointer_cast<void>(obj);
       return PM_SUCCESS;
     }
   };
 
   class SceneDataLoader : public BaseMsg {
-    int LoadSysopt(const ConfigItem & cfg){
-      std::shared_ptr<SysOptions> sysopt = dc.Get<SysOptions>("SysOptions");
-      if(cfg.HasAttribute("screen_width")) sysopt->screen_width = cfg.AttributeI("screen_width");
-      if(cfg.HasAttribute("screen_height")) sysopt->screen_height = cfg.AttributeI("screen_height");
-      if(cfg.HasAttribute("multimedia_library")) sysopt->multimedia_library = cfg.Attribute("multimedia_library");
-      if(cfg.HasAttribute("accel")) sysopt->accelerator = cfg.Attribute("accelerator");
-      if(cfg.HasAttribute("io_backend")) sysopt->io = cfg.Attribute("io_backend");
-      if(cfg.HasAttribute("img_backend")) sysopt->img = cfg.Attribute("img_backend");
-      return PM_SUCCESS;
-    }
-
     int LoadImage(std::string id, std::string path){
-      msg_debug("load image, id = ", id, "path = ", path);
+      msg_debug("load image, id =", quotec(id), "path =", quote(path));
   
       if(not path.size()){
         msg_warning("empty path");
@@ -140,18 +138,21 @@ namespace pmgd {
       std::string image_id = cfg.Attribute("image_id");
       std::string image_path = cfg.Attribute("image_path");
       if(image_path.size()){
-        msg_debug("texture image is passed by path", image_path);
+        msg_debug("texture image is passed by path", quote(image_path));
         int err = LoadImage(image_id, image_path);
         if(err != PM_SUCCESS){
-          msg_warning("texture image load failed", image_path);
+          msg_warning("texture image load failed", quote(image_path));
           return err;
         }
-      } else msg_debug("texture image is passed by id", image_id);
+
+        if(not image_id.size()) image_id = image_path;
+      } else msg_debug("texture image is passed by id =", quote(image_id));
+      
 
       /// build texture
       std::shared_ptr<Image> img = dc.Get<Image>(image_id);
       if(img == nullptr){
-        msg_warning("can't find image", image_id);
+        msg_warning("can't find image", quote(image_id));
         return PM_ERROR_INCORRECT_ARGUMENTS;
       }
       std::shared_ptr<Texture> texture = factory->MakeTexture(img);
@@ -183,13 +184,6 @@ namespace pmgd {
     }
 
     int Load(Config & cfg){
-      std::shared_ptr<SysOptions> sysopt = std::make_shared<SysOptions>();
-      dc.Add("SysOptions", sysopt);
-
-      ConfigSchema sysopt_schema({});
-      std::function<int(ConfigItem&)> load_sysopt = [this](const ConfigItem & c) { return this->LoadSysopt(c); };
-      cfg.ProcessItems("sys", sysopt_schema, load_sysopt);
-
       ConfigSchema texture_schema({"id"});
       std::function<int(ConfigItem&)> load_texture = [this](const ConfigItem & c) { return this->LoadTexture(c); };
       cfg.ProcessItems("texture", texture_schema, load_texture);

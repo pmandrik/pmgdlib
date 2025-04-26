@@ -1,15 +1,10 @@
-#include <gtest/gtest.h>
+#include <test_common.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>
 
 #define USE_SDL
 #include "pmgdlib_factory.h"
-
-#define GTEST_COUT std::cerr << "[          ] [ INFO ]"
-
-using namespace pmgd;
-using namespace std;
 
 TEST(sdl_core, mouse) {
 }

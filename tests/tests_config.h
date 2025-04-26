@@ -5,9 +5,6 @@
 
 #include "pmgdlib_config.h"
 
-using namespace pmgd;
-using namespace std;
-
 TEST(pmlib_config, config) {
   ConfigItem cfg_1;
   cfg_1.AddAttribute("art1", "val1");

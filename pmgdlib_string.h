@@ -107,7 +107,13 @@ namespace pmgd {
   }
 
   // Special functions ============================================================================================================================
+  std::string quote(const std::string & str, std::string qt = "\""){
+    return qt + str + qt;
+  }
 
+  std::string quotec(const std::string & str, std::string qt = "\""){
+    return qt + str + qt + ",";
+  }
 };
 
 #endif

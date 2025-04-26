@@ -6,8 +6,6 @@
 #include "pmgdlib_core.h"
 #include "pmgdlib_factory.h"
 
-using namespace pmgd;
-
 TEST(pmlib_data, io_load_dummy) {
   SysOptions bo;
   Backend bk = get_backend(bo);

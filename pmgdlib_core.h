@@ -340,6 +340,22 @@ namespace pmgd {
     void Finilize(){
       gl = accelerator == "GL";
     }
+
+    std::string AsString(){
+      std::string answer;
+      std::string tabs2 = std::string(2, ' ');
+      std::string tabs4 = std::string(4, ' ');
+      answer += "SysOptions(\n";
+      answer += tabs2 + "Backends:\n";
+      answer += tabs4 + "io backend = " + io + "\n";
+      answer += tabs4 + "img backend = " + img + "\n";
+      answer += tabs4 + "multimedia_library backend = " + multimedia_library + "\n";
+      answer += tabs4 + "accelerator backend = " + accelerator + "\n";
+      answer += tabs2 + "Screen options:" + "\n";
+      answer += tabs4 + "width, height = " + std::to_string(screen_width) + " " + std::to_string(screen_height) + "\n";
+      answer += ")";
+      return answer;
+    }
   };
 
   class Window {};

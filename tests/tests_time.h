@@ -7,8 +7,6 @@
 
 #include "pmgdlib_time.h"
 
-using namespace pmgd;
-
 bool tick_timer(Ticker & ticker, int n_ticks, int val=1){
   bool answer = true;
   while(n_ticks > 0){

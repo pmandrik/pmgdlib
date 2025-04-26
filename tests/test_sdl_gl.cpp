@@ -1,12 +1,10 @@
-#include <gtest/gtest.h>
+#include <test_common.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
-
-#define GTEST_COUT std::cerr << "[          ] [ INFO ]"
 
 TEST(sdl_native, init_gl_context) {
   // init

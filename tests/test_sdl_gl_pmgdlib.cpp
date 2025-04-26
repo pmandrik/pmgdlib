@@ -1,17 +1,12 @@
-#include <gtest/gtest.h>
+#include <test_common.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <pmgdlib_gl.h>
 #include <vector>
 
-using namespace pmgd;
-using namespace std;
-
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
-
-#define GTEST_COUT std::cerr << "[          ] [ INFO ]"
 
 const std::string vert = R"(
     #version 300 es

@@ -7,8 +7,6 @@
 
 #include "pmgdlib_string.h"
 
-using namespace pmgd;
-
 TEST(pmlib_string, strip) {
   std::string txt = "     ban an a     ";
   lstrip(txt);

@@ -24,7 +24,7 @@ TEST(pmlib_config, config) {
   vector<ConfigItem> data = cfg_1.Get("data with id");
   EXPECT_EQ(data.size(), 10);
 
-  vector<string> attrs = cfg_1.GetAttrsFromData("data with id", "id");
+  vector<string> attrs = cfg_1.GetAttrsFromNested("data with id", "id");
   EXPECT_EQ(attrs.size(), 10);
   EXPECT_EQ(attrs[5], string("5"));
 

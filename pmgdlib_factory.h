@@ -73,6 +73,10 @@ namespace pmgd {
     return back;
   };
 
+  template<typename T> std::string add_type_prefix(const std::string & name){return "default:" + name;}
+  template<> std::string add_type_prefix<Image>(const std::string & name){return "image:" + name;}
+  template<> std::string add_type_prefix<Shader>(const std::string & name){return "shader:" + name;}
+
   class DataContainer : public BaseMsg {
     private:
     std::unordered_map<std::string, std::shared_ptr<void>> data;
@@ -81,7 +85,8 @@ namespace pmgd {
     template<typename T>
     std::shared_ptr<T> Get(const std::string & name){
       if( not name.size() ) return nullptr;
-      std::unordered_map<std::string, std::shared_ptr<void>>::const_iterator ptr = data.find(name);
+      const std::string id = add_type_prefix<T>(name);
+      std::unordered_map<std::string, std::shared_ptr<void>>::const_iterator ptr = data.find(id);
       if(ptr == data.end()) {
         msg_warning("can't find", quote(name), ", return nullptr");
         return nullptr;
@@ -91,13 +96,14 @@ namespace pmgd {
 
     template<typename T>
     int Add(const std::string & name, std::shared_ptr<T> obj){
-      std::unordered_map<std::string, std::shared_ptr<void>>::const_iterator ptr = data.find(name);
+      const std::string id = add_type_prefix<T>(name);
+      std::unordered_map<std::string, std::shared_ptr<void>>::const_iterator ptr = data.find(id);
       if(ptr != data.end()) {
         msg_warning("can't add duplicate", quote(name));
         return PM_ERROR_DUPLICATE;
       }
       msg_debug("add", quote(name));
-      data[name] = std::static_pointer_cast<void>(obj);
+      data[id] = std::static_pointer_cast<void>(obj);
       return PM_SUCCESS;
     }
   };
@@ -173,6 +179,14 @@ namespace pmgd {
       return PM_SUCCESS;
     }
 
+    int LoadScene(const ConfigItem & cfg){
+      std::string id = cfg.Attribute("id");
+      
+
+
+      return PM_SUCCESS;
+    }
+
     std::shared_ptr<IO> io;
     std::shared_ptr<Factory> factory;
     DataContainer dc;
@@ -183,16 +197,24 @@ namespace pmgd {
       factory = backend.factory;
     }
 
+    std::vector<const ConfigItem*> processed_stack;
     int Load(Config & cfg){
       ConfigSchema texture_schema({"id"});
-      std::function<int(ConfigItem&)> load_texture = [this](const ConfigItem & c) { return this->LoadTexture(c); };
-      cfg.ProcessItems("texture", texture_schema, load_texture);
+      ConfigProccessor load_texture = [this](const ConfigItem & c) { return this->LoadTexture(c); };
+      cfg.AddProcessingRule("texture", texture_schema, load_texture);
 
       ConfigSchema shader_schema({"id"});
-      std::function<int(ConfigItem&)> load_shader = [this](const ConfigItem & c) { return this->LoadShader(c); };
-      cfg.ProcessItems("shader", shader_schema, load_shader);
+      ConfigProccessor load_shader = [this](const ConfigItem & c) { return this->LoadShader(c); };
+      cfg.AddProcessingRule("shader", shader_schema, load_shader);
 
-      return PM_SUCCESS;
+      ConfigSchema scene_schema({"id"});
+      ConfigProccessor load_scene = [this](const ConfigItem & c) { return this->LoadScene(c); };
+      cfg.AddProcessingRule("scene", scene_schema, load_scene);
+
+      processed_stack.clear();
+      int ret = cfg.ProcessItems(processed_stack);
+
+      return ret;
     }
   };
 

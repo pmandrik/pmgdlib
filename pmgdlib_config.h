@@ -17,12 +17,12 @@
 namespace pmgd {
   // ======= config ====================================================================
   struct ConfigItem : public BaseMsg {
-    /// Store data to create Shta classes, something like:
+    /// Store nested to create Shta classes, something like:
     /// type, parameters -> item = new type(parameters['name1'], parameters['name2'], ... )
-    /// item.field[0] = data['filed'][0] etc
+    /// item.field[0] = nested['filed'][0] etc
     std::string type;
     std::map<std::string, std::string> attributes;
-    std::map<std::string, std::vector<ConfigItem>> data;
+    std::map<std::string, std::vector<ConfigItem>> nested;
     bool valid = true;
 
     /// Add Attribute & Data
@@ -30,7 +30,7 @@ namespace pmgd {
     void AddAttribute(std::string && name, std::string && value){ attributes[name] = value; }
 
     void Add(std::string name, ConfigItem & value){
-      data[name].push_back(value);
+      nested[name].push_back(value);
     }
 
     bool Merge(ConfigItem & other){
@@ -38,7 +38,7 @@ namespace pmgd {
       for(auto iter = other.attributes.begin(); iter != other.attributes.end(); ++iter)
         AddAttribute(iter->first, iter->second);
       
-      for(auto iter = other.data.begin(); iter != other.data.end(); ++iter){
+      for(auto iter = other.nested.begin(); iter != other.nested.end(); ++iter){
         for(auto data_iter = iter->second.begin(); data_iter != iter->second.begin(); ++data_iter)
           Add(iter->first, *data_iter);
       }
@@ -72,13 +72,13 @@ namespace pmgd {
       return atof(attr.c_str()); //FIXME
     }
 
-    /// Get ConfigItem from Data
+    /// Get ConfigItem from nested
     std::vector<ConfigItem> Get(std::string name) const {
-      return map_get(data, name, std::vector<ConfigItem>());
+      return map_get(nested, name, std::vector<ConfigItem>());
     }
 
-    std::vector<std::string> GetAttrsFromData(std::string name, std::string attr) const {
-      /// Get ConfigItem from Data
+    std::vector<std::string> GetAttrsFromNested(std::string name, std::string attr) const {
+      /// Get ConfigItem from nested
       std::vector<std::string> answer;
       std::vector<ConfigItem> rels = Get(name);
       for(auto rel : rels){
@@ -94,13 +94,13 @@ namespace pmgd {
       for(auto iter : attributes)
         hr += ntabs2 + " " + iter.first + " " + iter.second + "\n";
 
-      hr += ntabs + "child data:\n";
+      hr += ntabs + "nested data:\n";
       if(max_depth == 0){
         hr += "...";
         return;
       }
 
-      for(auto iter : data){
+      for(auto iter : nested){
         hr += ntabs2 + " " + iter.first + ":";
         for(auto item : iter.second) item.FillHrString(hr, n_tabs + 2, max_depth-1);
       }
@@ -116,12 +116,58 @@ namespace pmgd {
   struct ConfigSchema {
     std::vector <std::string> mandatory;
 
+    ConfigSchema(){}
     ConfigSchema(std::vector <std::string> mandatory){
       this->mandatory = mandatory;
     }
   };
 
+  using ConfigProccessor = std::function<int(const ConfigItem&)>;
+  struct ConfigProcessingRule {
+    ConfigSchema schema;
+    ConfigProccessor proccessor;
+
+    ConfigProcessingRule(){}
+    ConfigProcessingRule(const ConfigSchema & schema, ConfigProccessor proccessor){
+      this->schema = schema;
+      this->proccessor = proccessor;
+    }
+  };
+
   class Config : public ConfigItem {
+    std::map<std::string, ConfigProcessingRule> processing_rules;
+
+    int ProcessNestedItems(const std::map<std::string, std::vector<ConfigItem>> & nested, std::vector<const ConfigItem*> & processed_stack) const {
+      for(auto iter = nested.begin(); iter != nested.end(); ++iter){
+        const std::string & key = iter->first;
+        auto nested_rule = processing_rules.find(key);
+        if(nested_rule == processing_rules.end()) continue;
+
+        const std::vector<ConfigItem> & group = iter->second;
+        for(int i = 0, i_max = group.size(); i < i_max; ++i){
+          int ret = ProcessItem(group[i], nested_rule->second, processed_stack);
+          if(ret == PM_ERROR_SCHEMA){msg_warning("item = ", key, i, "invalid schema = ", ret);}
+          else if(ret != PM_SUCCESS){msg_warning("item = ", key, i, "processed with error code = ", ret);}
+
+          if(ret != PM_SUCCESS) return ret;
+        }
+      }
+      return PM_SUCCESS;
+    }
+
+    int ProcessItem(const ConfigItem & item, const ConfigProcessingRule & rule, std::vector<const ConfigItem*> & processed_stack) const {
+      int valid = Validate(rule.schema, item);
+      if(valid != PM_SUCCESS) return valid;
+
+      int status = rule.proccessor(item);
+      if(status != PM_SUCCESS) return status;
+
+      processed_stack.push_back(&item);
+      int ret = ProcessNestedItems(item.nested, processed_stack);
+      processed_stack.pop_back();
+      return ret;
+    }
+
     public:
     int Validate(const ConfigSchema & schema, const ConfigItem & item) const {
       for(auto mand : schema.mandatory){
@@ -136,20 +182,14 @@ namespace pmgd {
       return PM_SUCCESS;
     }
 
-    void ProcessItems(std::string key, const ConfigSchema & schema, std::function<int(ConfigItem&)> proccessor) const {
-      std::vector<ConfigItem> items = Get(key);
-      for(int i = 0, i_max = items.size(); i < i_max; i++){
-        int valid = Validate(schema, items[i]);
-        if(valid != PM_SUCCESS){
-          msg_warning("item = ", key, i, "invalid schema = ", valid);
-          continue;
-        }
+    //! add schema and function to validate and process config item element
+    void AddProcessingRule(std::string key, const ConfigSchema & schema, std::function<int(const ConfigItem&)> proccessor) {
+      processing_rules[key] = ConfigProcessingRule(schema, proccessor);
+    }
 
-        int status = proccessor(items[i]);
-        if(status != PM_SUCCESS){
-          msg_warning("item = ", key, i, "processed with error code = ", status);
-        }
-      }
+    int ProcessItems(std::vector<const ConfigItem*> & processed_stack) const {
+      /// top element do not have attributes, thus, this is directly alias over ProcessNestedItems
+      return ProcessNestedItems(this->nested, processed_stack);
     }
 
     std::string ProcessTemplate(std::string raw) const {

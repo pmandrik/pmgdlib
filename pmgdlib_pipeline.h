@@ -213,23 +213,6 @@ namespace pmgd {
     }
     return PM_SUCCESS;
   }
-
-  std::string chains_to_pipelines(std::string str){
-    data_string_to_pipeline data;
-    string_to_pipeline(str, data);
-  
-    PipelineGraph<std::string> pg;
-    for(auto node : data.nodes){
-      pg.AddNode(node);
-    }
-  
-    for(auto edge : data.edges){
-      pg.AddEdge(edge.first, edge.second);
-    }
-  
-    std::vector<std::string*> pl = pg.GetPipeline();
-    return join_string_ptrs(pl);
-  }
 };
 
 #endif

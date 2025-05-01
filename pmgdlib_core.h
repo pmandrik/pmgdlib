@@ -8,6 +8,7 @@
 #include "pmgdlib_defs.h"
 #include "pmgdlib_msg.h"
 #include "pmgdlib_math.h"
+#include "pmgdlib_string.h"
 #include <stack>
 
 namespace pmgd {
@@ -359,6 +360,20 @@ namespace pmgd {
   };
 
   class Window {};
+
+  class Scene : public BaseMsg {
+    public:
+    std::string id;
+
+    Scene(const std::string & id){
+      this->id = id;
+    }
+
+    int AddPipeline(const std::string & pipeline_id, const std::string & chain){
+      msg_debug("add", quote(pipeline_id), quote(chain));
+      return PM_SUCCESS;
+    }
+  };
 
   class SysFactory {
     public:

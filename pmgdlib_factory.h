@@ -23,12 +23,15 @@ namespace pmgd {
     std::shared_ptr<SysFactory> sys_imp = std::make_shared<SysFactory>();
 
     int InitAccel(const SysOptions & opts){ return accel_imp->InitAccel(opts);}
+    
     std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img){ return accel_imp->MakeTexture(img); }
     std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt){
       return accel_imp->MakeShader(vert_txt, frag_txt);
     }
 
     std::shared_ptr<Window> CreateWindow(const SysOptions & opts){return sys_imp->CreateWindow(opts);}
+
+    std::shared_ptr<Scene> MakeScene(const std::string & id){ return std::make_shared<Scene>(id); }
   };
 
   class Backend {
@@ -181,17 +184,34 @@ namespace pmgd {
 
     int LoadScene(const ConfigItem & cfg){
       std::string id = cfg.Attribute("id");
-      
-
-
+      std::shared_ptr<Scene> scene = factory->MakeScene(id);
+      dc.Add(id, scene);
       return PM_SUCCESS;
+    }
+
+    std::string GetFatherAttribute(std::string attr, unsigned int depth=1){
+      if(depth < processed_stack.size()) return "";
+      const ConfigItem * father = processed_stack.at(processed_stack.size() - depth);
+      return father->Attribute(attr);
+    }
+
+    int LoadPipelineChain(const ConfigItem & cfg){
+      std::shared_ptr<Scene> scene = dc.Get<Scene>(GetFatherAttribute("id", 2));
+      std::string pipeline_id = GetFatherAttribute("id");
+      
+      if(not scene or not pipeline_id.size()){
+        msg_warning("pipeline is required to be a part of scene and pipeline");
+        return PM_ERROR_SCHEMA;
+      }
+      std::string value = cfg.Attribute("value");
+      return scene->AddPipeline(pipeline_id, value);
     }
 
     std::shared_ptr<IO> io;
     std::shared_ptr<Factory> factory;
-    DataContainer dc;
 
     public:
+    DataContainer dc;
     SceneDataLoader(const Backend & backend){
       io = backend.io;
       factory = backend.factory;
@@ -199,6 +219,8 @@ namespace pmgd {
 
     std::vector<const ConfigItem*> processed_stack;
     int Load(Config & cfg){
+      msg_debug("start ...");
+
       ConfigSchema texture_schema({"id"});
       ConfigProccessor load_texture = [this](const ConfigItem & c) { return this->LoadTexture(c); };
       cfg.AddProcessingRule("texture", texture_schema, load_texture);
@@ -211,9 +233,14 @@ namespace pmgd {
       ConfigProccessor load_scene = [this](const ConfigItem & c) { return this->LoadScene(c); };
       cfg.AddProcessingRule("scene", scene_schema, load_scene);
 
+      ConfigSchema pipeline_chain_schema({"chain"}, {"scene", "pipeline"});
+      ConfigProccessor load_pipeline_chain = [this](const ConfigItem & c) { return this->LoadPipelineChain(c); };
+      cfg.AddProcessingRule("pipeline", pipeline_chain_schema, load_pipeline_chain);
+
       processed_stack.clear();
       int ret = cfg.ProcessItems(processed_stack);
 
+      msg_debug("done ...", ret);
       return ret;
     }
   };

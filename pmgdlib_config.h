@@ -11,6 +11,7 @@
 #include "pmgdlib_std.h"
 #include "pmgdlib_msg.h"
 #include "pmgdlib_core.h"
+#include "pmgdlib_string.h"
 
 #include "tinyxml2.h"
 
@@ -115,10 +116,11 @@ namespace pmgd {
 
   struct ConfigSchema {
     std::vector <std::string> mandatory;
-
+    std::vector <std::string> fathers;
     ConfigSchema(){}
-    ConfigSchema(std::vector <std::string> mandatory){
+    ConfigSchema(std::vector <std::string> mandatory, std::vector <std::string> fathers={}){
       this->mandatory = mandatory;
+      this->fathers = fathers;
     }
   };
 
@@ -156,7 +158,7 @@ namespace pmgd {
     }
 
     int ProcessItem(const ConfigItem & item, const ConfigProcessingRule & rule, std::vector<const ConfigItem*> & processed_stack) const {
-      int valid = Validate(rule.schema, item);
+      int valid = Validate(rule.schema, item, processed_stack);
       if(valid != PM_SUCCESS) return valid;
 
       int status = rule.proccessor(item);
@@ -169,14 +171,31 @@ namespace pmgd {
     }
 
     public:
-    int Validate(const ConfigSchema & schema, const ConfigItem & item) const {
+    int Validate(const ConfigSchema & schema, const ConfigItem & item, std::vector<const ConfigItem*> & processed_stack) const {
       for(auto mand : schema.mandatory){
         std::string val = item.Attribute(mand);
         if(val.size() == 0){
           std::string str = item.GetShortStr();
-          msg_warning("item (", str, ") has no mandatory attribute \"" + mand + "\"" );
+          msg_warning("item", quote(str), "has no mandatory attribute \"" + mand + "\"" );
           return PM_ERROR_SCHEMA;
         }
+      }
+
+      if(processed_stack.size() < schema.fathers.size()){
+        std::string str = item.GetShortStr();
+        msg_warning("item", quote(str), "nested depth requirements =", schema.fathers.size(), "> stack size =", processed_stack.size() );
+        return PM_ERROR_SCHEMA;
+      }
+
+      int depth = 0;
+      for(auto father : schema.fathers){
+        const ConfigItem * cfg = processed_stack.at(schema.fathers.size() - depth);
+        if(cfg->type != father){
+          std::string str = item.GetShortStr();
+          msg_warning(quote(str), "require father", quote(father), "at depth level != ", cfg->type);
+          return PM_ERROR_SCHEMA;
+        }
+        depth += 1;
       }
 
       return PM_SUCCESS;

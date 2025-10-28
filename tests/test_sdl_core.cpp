@@ -4,7 +4,10 @@
 #include <SDL_opengl.h>
 
 #define USE_SDL
+#include "pmgdlib_core.h"
 #include "pmgdlib_factory.h"
+
+using namespace pmgd;
 
 TEST(sdl_core, mouse) {
 }

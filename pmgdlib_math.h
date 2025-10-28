@@ -6,6 +6,7 @@
 #define PMGDLIB_MATH_HH 1
 
 #include <math.h>
+#include <numeric>
 
 namespace pmgd {
 
@@ -151,6 +152,23 @@ namespace pmgd {
   rgb operator / (rgb va, rgb vb){return rgb(va.r / vb.r, va.g / vb.g, va.b / vb.b);}
 
   std::ostream & operator << (std::ostream & out, rgb v){return out << " rgb( " << v.r << ", " << v.g << ", " << v.b << ", " << v.a << " ) ";};
+
+  // ======= random =====================================================================================================
+  int rint(const int start, const int end){
+    if(end < start) return 0;
+    return rand() % (end + 1 - start) + start;
+  }
+
+  std::vector<int> rsample(const unsigned int population_size, const unsigned int sample_size){
+    std::vector<int> pool(population_size);
+    std::iota(pool.begin(), pool.end(), 0);
+    for(unsigned int i = 0; i < sample_size; ++i){
+      int r = rint(i, population_size-1);
+      std::swap(pool[i], pool[r]);
+    }
+    pool.resize(sample_size);
+    return pool;
+  }
 };
 
 #endif

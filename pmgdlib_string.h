@@ -6,6 +6,11 @@
 #define PMGDLIB_STRING_HH 1
 
 #include "pmgdlib_defs.h"
+#include <string>
+#include <algorithm>
+#include <vector>
+#include <unordered_map>
+#include <memory>
 
 namespace pmgd {
 

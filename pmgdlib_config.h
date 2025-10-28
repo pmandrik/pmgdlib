@@ -13,7 +13,9 @@
 #include "pmgdlib_core.h"
 #include "pmgdlib_string.h"
 
-#include "tinyxml2.h"
+#ifdef USE_TINYXML2
+  #include "tinyxml2.h"
+#endif
 
 namespace pmgd {
   // ======= config ====================================================================
@@ -223,57 +225,10 @@ namespace pmgd {
   };
 
   // ======= config loading ====================================================================
-  class TinyXML {
-    tinyxml2::XMLDocument doc;
-
-    void ToCfgRec(ConfigItem & item, const tinyxml2::XMLElement* head){
-      /// add attributes
-      for (const tinyxml2::XMLAttribute* attr = head->FirstAttribute(); attr; attr = attr->Next()) {
-        const char* name = attr->Name();
-        const char* value = attr->Value();
-        item.AddAttribute(name, value);
-      }
-
-      /// add childs
-      for (const tinyxml2::XMLElement* child = head->FirstChildElement(); child; child = child->NextSiblingElement()) {
-        const char* name = child->Name();
-        ConfigItem child_item ;
-        ToCfgRec(child_item, child);
-        item.Add(name, child_item);
-      }
-    }
-
-    public:
-    /// predefined function to load xml into internal cfg format
-    void ToCfg(Config & cfg){
-      for (const tinyxml2::XMLElement* child = doc.FirstChildElement(); child; child = child->NextSiblingElement()) {
-        const char* name = child->Name();
-        ConfigItem child_item;
-        ToCfgRec(child_item, child);
-        cfg.Add(name, child_item);
-      }
-    }
-
-    TinyXML(const std::string & raw){
-      doc.Parse(raw.c_str());
-      /// TODO
-      /*
-      XMLError error = doc.Parse(raw.c_str());
-      if( error ){
-        check_tinyxml_error(error, cfg_path);
-        state = 1;
-        return false;
-      }
-      */
-    }
-  };
-
   class ConfigLoader : public BaseMsg {
     public:
-    Config LoadXmlCfg(const std::string & raw){
+    virtual Config LoadXmlCfg(const std::string & raw){
       Config cfg;
-      TinyXML txml = TinyXML(raw);
-      txml.ToCfg(cfg);
       return cfg;
     }
 
@@ -291,6 +246,47 @@ namespace pmgd {
       return sysopt;
     }
   };
+
+  #ifdef USE_TINYXML2
+    class TinyXmlConfigLoader : public ConfigLoader {
+      tinyxml2::XMLDocument doc;
+
+      virtual Config LoadXmlCfg(const std::string & raw){
+        Config cfg;
+        doc.Parse(raw.c_str());
+        ToCfg(cfg);
+        return cfg;
+      }
+
+      void ToCfgRec(ConfigItem & item, const tinyxml2::XMLElement* head){
+        /// add attributes
+        for (const tinyxml2::XMLAttribute* attr = head->FirstAttribute(); attr; attr = attr->Next()) {
+          const char* name = attr->Name();
+          const char* value = attr->Value();
+          item.AddAttribute(name, value);
+        }
+
+        /// add childs
+        for (const tinyxml2::XMLElement* child = head->FirstChildElement(); child; child = child->NextSiblingElement()) {
+          const char* name = child->Name();
+          ConfigItem child_item ;
+          ToCfgRec(child_item, child);
+          item.Add(name, child_item);
+        }
+      }
+
+      public:
+      /// predefined function to load xml into internal cfg format
+      void ToCfg(Config & cfg){
+        for (const tinyxml2::XMLElement* child = doc.FirstChildElement(); child; child = child->NextSiblingElement()) {
+          const char* name = child->Name();
+          ConfigItem child_item;
+          ToCfgRec(child_item, child);
+          cfg.Add(name, child_item);
+        }
+      }
+    };
+  #endif
 
 };
 

@@ -2,11 +2,6 @@
 #                   https://inspirehep.net/authors/1395721
 #                   https://vk.com/pmandrik
 
-TEST_SDL = true
-TEST_GL = true
-TEST_VULKAN = true
-USE_STB = true
-
 gtest = dependency('gtest', main: true, required: false)
 if not gtest.found()
   error('MESON_SKIP_TEST: gtest not installed.')
@@ -54,10 +49,8 @@ if TEST_SDL
   endif
 
   # sdl2 dependency - V
-  sdl2_build_path = '/home/i/work/pmgdlib_external/SDL2-2.30.3/build'
   sdl2 = cpp.find_library('SDL2-2.0', dirs : sdl2_build_path)
-  sdl2_inc = include_directories('../../pmgdlib_external/SDL2-2.30.3/build/include/SDL2/.',
-                                 '../../pmgdlib_external/SDL2-2.30.3/build/include-config-release/SDL2/.')
+  sdl2_inc = include_directories(sdl2_include_path)
 
   sdl_tests = ['test_sdl_core']
   foreach sdl_test : sdl_tests
@@ -70,8 +63,7 @@ if TEST_SDL
   endforeach
 
   # gl tests
-  if TEST_GL
-    gl = dependency('gl', main: true, required: true)
+  if TEST_GL and gl.found()
     sdl_tests = ['test_sdl_gl', 'test_sdl_gl_pmgdlib', 'test_gl_factory']
     foreach sdl_test : sdl_tests
       test_exec = executable(sdl_test, sdl_test + '.cpp', 

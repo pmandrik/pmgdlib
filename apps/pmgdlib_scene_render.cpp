@@ -20,31 +20,28 @@ int main(int argc, char** argv){
     exit(0);
   }
 
-  // get config
+  /// Get config from args.
   std::string cfg_path = result["config"].as<std::string>();
 
-  /// read cfg txt
+  /// Read cfg txt.
   SysOptions bo;
   bo.io = "SDL";
   Backend bk = get_backend(bo);
   std::string cfg_raw = bk.io->ReadTxt(cfg_path);
 
-  /// load cfg from xml
+  /// Load cfg from xml.
   ConfigLoader cl;
   Config cfg = cl.LoadXmlCfg(cfg_raw);
 
-  /// Parce scene definition
+  /// Parce scene definition, load images, load shaders, construct scene objects.
+  // shared_resource_->window = backend.factory->CreateWindow(options);
+  //SceneDataLoader loader(bk);
+  //int ret = loader.Load(cfg);
+  //if(ret != PM_SUCCESS) return ret;
 
-
-  /// Load images
-  /// Load shaders
-  /// Load other scene data
-
-  /// Construct Scene
-  /// Render Scene
-
-  /// Do a 1 shot run, render scene into one micture or capture the movie ..
+  /// Render Scene: do a 1 shot run, render scene into one picture or capture the movie ..
   /// .. or keep running to let edit the scene and update XML cfg
+  // SceneRender->Run();
 
   return 0;
 }

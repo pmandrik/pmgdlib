@@ -1,10 +1,6 @@
-// P.~Mandrik, 2024, https://github.com/pmandrik/pmgdlib
-//                   https://inspirehep.net/authors/1395721
-//                   https://vk.com/pmandrik
+// P.~Mandrik, 2025, https://github.com/pmandrik/pmgdlib
 
-#ifndef PMGDLIB_STRING_HH
-#define PMGDLIB_STRING_HH 1
-
+#include "pmgdlib_string.h"
 #include "pmgdlib_defs.h"
 #include <string>
 #include <algorithm>
@@ -16,26 +12,26 @@ namespace pmgd {
 
   // General functions ============================================================================================================================
   //! remove whitespaces at the begin of the string
-  inline void lstrip(std::string &s) {
+  void lstrip(std::string &s) {
     if(not s.size()) return;
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) { return !std::isspace(ch); }));
   }
 
   //! remove whitespaces at the end of the string
-  inline void rstrip(std::string &s) {
+  void rstrip(std::string &s) {
     if(not s.size()) return;
     s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) { return !std::isspace(ch); }).base(), s.end());
   }
 
   //! remove whitespaces at the end of the string
-  inline void strip(std::string &s) {
+  void strip(std::string &s) {
     if(not s.size()) return;
     lstrip(s);
     rstrip(s);
   }
 
   //! split string by sep[arator] into answer vector
-  void split_string(const std::string &str, std::vector<std::string> &answer, std::string sep = " "){
+  void split_string(const std::string &str, std::vector<std::string> &answer, std::string sep){
     size_t sep_size = sep.size();
     size_t i_start = 0, i_end = 0;
     for(size_t i_max = str.size(); i_end + sep_size <= i_max;){
@@ -49,7 +45,7 @@ namespace pmgd {
   }
 
   //! strip every separated part of the string
-  void split_string_strip(const std::string &str, std::vector<std::string> & answer, std::string sep = " "){
+  void split_string_strip(const std::string &str, std::vector<std::string> & answer, std::string sep){
     split_string(str, answer, sep);
     for(size_t i = 0; i < answer.size(); ++i){
       strip(answer[i]);
@@ -57,7 +53,7 @@ namespace pmgd {
   }
 
   //! join string
-  std::string join_strings(const std::vector<std::string> &strings, std::string sep = "") {
+  std::string join_strings(const std::vector<std::string> &strings, std::string sep) {
     std::string answer;
     for(size_t i = 0, i_max = strings.size(); i < i_max; ++i){
       answer += strings[i];
@@ -66,7 +62,7 @@ namespace pmgd {
     return answer;
   }
 
-  std::string join_string_ptrs(const std::vector<std::string*> &strings, std::string sep = "") {
+  std::string join_string_ptrs(const std::vector<std::string*> &strings, std::string sep) {
     std::string answer;
     for(size_t i = 0, i_max = strings.size(); i < i_max; ++i){
       answer += *(strings[i]);
@@ -104,7 +100,7 @@ namespace pmgd {
     }
   }
 
-  bool bool_from_string(std::string val, bool def_answer = true){
+  bool bool_from_string(std::string val, bool def_answer){
     to_upper(val);
     if(not val.size() or val=="FALSE" or val=="NULL" or val=="NULLPTR" or val=="0" or val=="OFF") return false;
     if(val=="TRUE" or val=="1" or val=="ON") return true;
@@ -112,13 +108,11 @@ namespace pmgd {
   }
 
   // Special functions ============================================================================================================================
-  std::string quote(const std::string & str, std::string qt = "\""){
+  std::string quote(const std::string & str, std::string qt){
     return qt + str + qt;
   }
 
-  std::string quotec(const std::string & str, std::string qt = "\""){
+  std::string quotec(const std::string & str, std::string qt){
     return qt + str + qt + ",";
   }
 };
-
-#endif

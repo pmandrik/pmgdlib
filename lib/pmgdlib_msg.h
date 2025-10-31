@@ -27,11 +27,6 @@ namespace pmgd {
     return def_verbose_lvl;
   };
 
-  class BaseMsg {
-    public:
-    int verbose_lvl = msg_verbose_lvl();
-  };
-
   #define MSG_COLOR_RED     "\x1b[31m"
   #define MSG_COLOR_GREEN   "\x1b[32m"
   #define MSG_COLOR_YELLOW  "\x1b[33m"
@@ -56,11 +51,27 @@ namespace pmgd {
     }
   #endif
 
+  std::string msg_short_trace(const std::source_location& location = std::source_location::current()){
+    return std::string(location.file_name()) + ":" + std::to_string(location.line()) + ":";
+  }
+
   #define msg_error(...)   if(verbose_lvl >= pmgd::verbose::ERROR)   pmgd::msg_err(MSG_ERROR_PREFIX, msg_trace(), __VA_ARGS__)
   #define msg_warning(...) if(verbose_lvl >= pmgd::verbose::WARNING) pmgd::msg_err(MSG_WARNING_PREFIX, msg_trace(), __VA_ARGS__)
   #define msg_info(...)    if(verbose_lvl >= pmgd::verbose::INFO)    pmgd::msg(MSG_INFO_PREFIX, msg_trace(), __VA_ARGS__)
   #define msg_debug(...)   if(verbose_lvl >= pmgd::verbose::DEBUG)   pmgd::msg(MSG_DEBUG_PREFIX, msg_trace(), __VA_ARGS__)
   #define msg_verbose(...) if(verbose_lvl >= pmgd::verbose::VERBOSE) pmgd::msg(MSG_VERBOSE_PREFIX, msg_trace(), __VA_ARGS__)
+
+  #define msg_st_error(...)   if(verbose_lvl >= pmgd::verbose::ERROR)   pmgd::msg_err(MSG_ERROR_PREFIX, msg_short_trace(), __VA_ARGS__)
+  #define msg_st_warning(...) if(verbose_lvl >= pmgd::verbose::WARNING) pmgd::msg_err(MSG_WARNING_PREFIX, msg_short_trace(), __VA_ARGS__)
+  #define msg_st_info(...)    if(verbose_lvl >= pmgd::verbose::INFO)    pmgd::msg(MSG_INFO_PREFIX, msg_short_trace(), __VA_ARGS__)
+  #define msg_st_debug(...)   if(verbose_lvl >= pmgd::verbose::DEBUG)   pmgd::msg(MSG_DEBUG_PREFIX, msg_short_trace(), __VA_ARGS__)
+  #define msg_st_verbose(...) if(verbose_lvl >= pmgd::verbose::VERBOSE) pmgd::msg(MSG_VERBOSE_PREFIX, msg_short_trace(), __VA_ARGS__)
+
+  #define msg_nt_error(...)   if(verbose_lvl >= pmgd::verbose::ERROR)   pmgd::msg_err(MSG_ERROR_PREFIX, __VA_ARGS__)
+  #define msg_nt_warning(...) if(verbose_lvl >= pmgd::verbose::WARNING) pmgd::msg_err(MSG_WARNING_PREFIX, __VA_ARGS__)
+  #define msg_nt_info(...)    if(verbose_lvl >= pmgd::verbose::INFO)    pmgd::msg(MSG_INFO_PREFIX, __VA_ARGS__)
+  #define msg_nt_debug(...)   if(verbose_lvl >= pmgd::verbose::DEBUG)   pmgd::msg(MSG_DEBUG_PREFIX, __VA_ARGS__)
+  #define msg_nt_verbose(...) if(verbose_lvl >= pmgd::verbose::VERBOSE) pmgd::msg(MSG_VERBOSE_PREFIX, __VA_ARGS__)
 
   // ======= msg ====================================================================
   void msg(){ std::cout << std::endl; };
@@ -103,6 +114,17 @@ namespace pmgd {
     std::cerr << t << separator;
     msg_sep_err(separator, last_symbol, args...);
   }
+
+  class BaseMsg {
+    public:
+    int verbose_lvl = msg_verbose_lvl();
+
+    template<typename... Args>
+    bool CWM(bool cond, Args... args){
+      if(cond) msg_nt_warning(args...);
+      return cond;
+    }
+  };
 };
 
 #endif

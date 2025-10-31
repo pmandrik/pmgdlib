@@ -507,6 +507,7 @@ namespace pmgd {
       msg_debug("constructor call");
       array_size = quad_aray_size * max_quads_number;
       array_size10 = array_size/10;
+      if(array_size10 == 0) array_size10 = array_size;
       data = new float[array_size];
       Clean();
 
@@ -698,12 +699,12 @@ namespace pmgd {
     }
   };
 
-  class FrameBufferGL : public FrameBuffer {
+  class FrameBufferGl : public FrameBuffer {
     GLuint fbo_id, texture_id, depth_id;
 
     /// OpenGL frame buffer implementation
     public :
-      FrameBufferGL(int size_x, int size_y) : FrameBuffer(size_x, size_y) {
+      FrameBufferGl(int size_x, int size_y) : FrameBuffer(size_x, size_y) {
         msg_debug("create frame buffer ...");
         // Texture
         glEnable(GL_TEXTURE_2D);
@@ -783,7 +784,7 @@ namespace pmgd {
       */
   };
 
-  void draw_fb_quad(FrameBufferGL & fb, const TextureDrawData & data){
+  void draw_fb_quad(FrameBufferGl & fb, const TextureDrawData & data){
     fb.BindTexture();
     glEnable(GL_TEXTURE_2D);
     draw_textured_quad(data.pos, data.size, data.tpos, data.tsize, data.angle, data.flip_x, data.flip_y);
@@ -811,6 +812,32 @@ glEnd
 glClear
 glVertex3f
 */
+
+  class TextureDrawerGl : public TextureDrawer {
+    public:
+    virtual void Draw(){
+      
+    }
+  };
+
+  class SceneRenderGl: public SceneRender {
+    std::shared_ptr<QuadsArrayGl> screen_qad;
+    std::shared_ptr<ShaderGl> default_shader;
+
+    public:
+    SceneRenderGl(){
+      /// "screen_qad" is used to draw 1 full screen frame to screen or another framebuffer
+      screen_qad = std::make_shared<QuadsArrayGl>(1);
+
+      /// "default_shader" is used to draw when no other shaders were provided
+      /// it is mandatory for OpenGL
+      default_shader; // TODO
+    }
+
+    virtual void Draw(std::shared_ptr<Scene> scene){
+      
+    }
+  };
 
   // ======= object maker ====================================================================
   class AccelFactoryGL : public AccelFactory {
@@ -840,7 +867,10 @@ glVertex3f
       //glClear(GL_DEPTH_BUFFER_BIT);
       return PM_SUCCESS;
     }
-    virtual std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img){ return make_shared<TextureGl>(img); }
+    
+    virtual std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img){ 
+      return make_shared<TextureGl>(img); 
+    }
     virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt){
       std::shared_ptr<ShaderGl> shader = std::make_shared<ShaderGl>();
       int status;
@@ -849,6 +879,15 @@ glVertex3f
       if((status = shader->CreateProgram()) != PM_SUCCESS) return nullptr;
       if((status = shader->AddUniformsAuto()) != PM_SUCCESS) return nullptr;
       return shader;
+    }
+    virtual std::shared_ptr<FrameBuffer> MakeFrameBuffer(const int & size_x, const int & size_y){
+      return std::make_shared<FrameBufferGl>(size_x, size_y);
+    }
+    virtual std::shared_ptr<TextureDrawer> MakeTextureDrawer(){
+      return std::make_shared<TextureDrawerGl>(); 
+    }
+    virtual std::shared_ptr<SceneRender> MakeSceneRender(){
+      return std::make_shared<SceneRenderGl>(); 
     }
   };
 };

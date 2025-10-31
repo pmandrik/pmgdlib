@@ -6,7 +6,12 @@ project('pmgdlib', 'cpp', default_options : ['c_std=c20', 'cpp_std=c++20'])
 cpp_args=['-Wfatal-errors']
 cpp = meson.get_compiler('cpp')
 
-test_inc = include_directories('./')
+test_inc = include_directories('./lib')
+pmgdlib_sources = [
+  './lib/pmgdlib_string.cpp',
+  './lib/pmgdlib_graph.cpp',
+  './lib/pmgdlib_config.cpp'
+]
 core_deps = [test_inc]
 core_links = []
 
@@ -69,6 +74,15 @@ if USE_STB
 endif
 
 add_project_arguments(cpp_args, language: ['cpp'])
+
+# pmgdlib
+pmgdlib = shared_library('pmgdlib', 
+  pmgdlib_sources,
+  include_directories: core_deps, 
+  link_with: core_links
+)
+core_links += [pmgdlib]
+
 subdir('tests')
 subdir('apps')
 subdir('subs')

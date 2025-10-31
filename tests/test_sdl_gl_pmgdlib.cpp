@@ -119,8 +119,8 @@ TEST_F(TestSuite, double_frame_buffer) {
 
   int fb_size_x = 100;
   int fb_size_y = 100;
-  std::shared_ptr<FrameBufferGL> fb1 = std::make_shared<FrameBufferGL>(fb_size_x, fb_size_y);
-  std::shared_ptr<FrameBufferGL> fb2 = std::make_shared<FrameBufferGL>(fb_size_x, fb_size_y);
+  std::shared_ptr<FrameBufferGl> fb1 = std::make_shared<FrameBufferGl>(fb_size_x, fb_size_y);
+  std::shared_ptr<FrameBufferGl> fb2 = std::make_shared<FrameBufferGl>(fb_size_x, fb_size_y);
   fb1->Clear();
   fb2->Clear();
   DoubleFrameBuffer dfb(fb1, fb2);
@@ -218,7 +218,7 @@ TEST_F(TestSuite, frame_buffer) {
   TextureGl td(image);
   TextureDrawData image_data(v2(0,0), v2(size_x/2,size_y/2));
 
-  FrameBufferGL fb(100, 100);
+  FrameBufferGl fb(100, 100);
   TextureDrawData data(v2(0,0), v2(size_x,size_y));
 
   for(int i = 0; i < 200; i++){

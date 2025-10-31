@@ -2,18 +2,31 @@
 //                   https://inspirehep.net/authors/1395721
 //                   https://vk.com/pmandrik
 
-#ifndef PMGDLIB_PIPELINE_HH
-#define PMGDLIB_PIPELINE_HH 1
+#ifndef pmgdlib_graph_HH
+#define pmgdlib_graph_HH 1
+
+#include <vector>
+#include <set>
+#include <unordered_map>
+#include <string>
 
 #include "pmgdlib_string.h"
+#include "pmgdlib_defs.h"
 
 namespace pmgd {
+
+  //=======================================================================================================================
+  template <typename NODE_ID_TYPE = int>
+  struct PgNodePrimitive {
+    NODE_ID_TYPE source;
+    NODE_ID_TYPE target;
+  };
 
   //! PipelineGraph:
   //!   Node = [int id],
   //!   Edge = [source node, target node]
   //! Targets:
-  //!   GetPipeline() build vector with elements where all targets are after sources or raise if it is not possible (detect loops).
+  //!   GetPipeline() build vector with elements where all targets are after sources or return <> if it is not possible (detect loops).
   //!   Node can have multiple sources and multiple targets.
   //!   Sources of one node are sorted by priority.
   //!   Graph maybe disconnected, then any order of separated parts is valid.
@@ -61,6 +74,12 @@ namespace pmgd {
         return true;
       }
 
+      Node* GetNode(const NODE_ID_TYPE &id){
+        auto it = nodes.find(id);
+        if(it == nodes.end()) return nullptr;
+        return it->second;
+      }
+
     public:
       //! add new node with given id if id not in the graph
       int AddNode(NODE_ID_TYPE id, int local_priority = 0){
@@ -90,16 +109,18 @@ namespace pmgd {
 
       //! add edge with direction from source to target
       int AddEdge(NODE_ID_TYPE source_id, NODE_ID_TYPE target_id){
-        auto find_target = nodes.find(target_id);
-        if(find_target == nodes.end()) return PM_ERROR_404;
+        // auto find_target = nodes.find(target_id);
+        // if(find_target == nodes.end()) return PM_ERROR_404;
 
-        auto find_source = nodes.find(source_id);
-        if(find_source == nodes.end()) return PM_ERROR_404;
+        // auto find_source = nodes.find(source_id);
+        // if(find_source == nodes.end()) return PM_ERROR_404;
 
-        Node* node_target = find_target->second;
+        Node* node_target = GetNode(target_id);
+        if(node_target == nullptr) return PM_ERROR_404;
         node_target->sources.insert(source_id);
 
-        Node* node_source = find_source->second;
+        Node* node_source = GetNode(source_id);
+        if(node_source == nullptr) return PM_ERROR_404;
         node_source->targets.insert(target_id);
 
         return PM_SUCCESS;
@@ -172,50 +193,40 @@ namespace pmgd {
 
         return answer;
       }
+
+      //! build pipeline-correct vector of elements pairs {source, target}
+      //! e.g. A->B->C,A->D->C will give [{A,B},{A,D},{B,C},{D,C}]
+      std::vector<PgNodePrimitive<NODE_ID_TYPE>> GetPipelineSourceGrouped(){
+        std::vector<NODE_ID_TYPE*> pipeline = GetPipeline();
+        std::vector<PgNodePrimitive<NODE_ID_TYPE>> answer;
+        for(auto id: pipeline){
+          Node* node = GetNode(*id);
+          if(node == nullptr)
+            return answer;
+          for(auto it = node->targets.begin(); it != node->targets.end(); ++it){
+            PgNodePrimitive<NODE_ID_TYPE> item;
+            item.source = *id;
+            item.target = *it;
+            answer.emplace_back(item);
+          }
+        }
+        return answer;
+      }
   };
 
+  /// Get pipeline string such as
+  /// "sla_back->sla_backbuff->sla_backloop->sla_fbuffer" or "A->B->C,D->E,E->C"
+  /// parse and add it to the pipeline
+  int add_strdata_to_pipeline(const std::string &str, PipelineGraph<std::string> &pg);
 
-  //! Pipeline
-  //! "sla_back->sla_backbuff->sla_backloop->sla_fbuffer"
-  //! expect input as "A->B->C,D->E,E->C"
-  struct data_string_to_pipeline {
-    std::set<std::string> nodes;
-    std::vector<std::pair<std::string,std::string>> edges;
-  };
-
-  int chain_to_pipeline(const std::string &str, data_string_to_pipeline &data){
-    std::vector<std::string> nodes;
-    split_string_strip(str, nodes, "->");
-    if(nodes.size() < 2){
-      return PM_ERROR_500;
-    }
-
-    for(size_t i = 0; i < nodes.size()-1; ++i){
-      std::string src = nodes[i];
-      std::string tgt = nodes[i+1];
-
-      data.nodes.insert(src);
-      data.nodes.insert(tgt);
-      data.edges.push_back(std::make_pair(src, tgt));
-    }
-
-    return PM_SUCCESS;
-  }
-
-  int string_to_pipeline(const std::string &str, data_string_to_pipeline &data){
-    std::vector<std::string> chains;
-    split_string_strip(str, chains, ",");
-
-    for(auto chain: chains){
-      int ret = chain_to_pipeline(chain, data);
-      if(ret != PM_SUCCESS)
-          return ret;
-    }
-    return PM_SUCCESS;
-  }
+  //=======================================================================================================================
+  
 };
 
 #endif
+
+
+
 
 
 

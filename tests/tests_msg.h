@@ -4,6 +4,9 @@
 #define TEST_MSG_HH 1
 
 #include "pmgdlib_msg.h"
+#include <sstream>
+#include <string> 
+using namespace pmgd;
 
 std::streambuf *old, *olderr;
 std::stringstream buffer;

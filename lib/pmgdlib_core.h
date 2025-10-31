@@ -362,7 +362,10 @@ namespace pmgd {
     }
   };
 
-  class Window {};
+  class Window {
+    public:
+    virtual ~Window() {}
+  };
 
   class ScenePipeline : public BaseMsg {
     PipelineGraph<std::string> pg;
@@ -435,6 +438,7 @@ namespace pmgd {
     }
   };
 
+<<<<<<< HEAD:lib/pmgdlib_core.h
   class SceneRender : public BaseMsg {
     public:
     virtual void Draw(std::shared_ptr<Scene> scene){
@@ -449,6 +453,9 @@ namespace pmgd {
   };
 
   class SysFactory {
+=======
+  class SysFactory : public BaseMsg {
+>>>>>>> master:pmgdlib_core.h
     public:
     virtual std::shared_ptr<Window> CreateWindow(const SysOptions & opts) {return nullptr;}
     virtual ~SysFactory() {};

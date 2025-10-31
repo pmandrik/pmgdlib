@@ -7,7 +7,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <source_location>
+
+#ifdef USE_SOURCE_TRACE
+  #include <source_location>
+#endif
 
 namespace pmgd {
   enum verbose {
@@ -20,7 +23,7 @@ namespace pmgd {
   };
 
   int & msg_verbose_lvl(){
-    static int def_verbose_lvl = verbose::INFO;
+    static int def_verbose_lvl = verbose::DEBUG;
     return def_verbose_lvl;
   };
 
@@ -38,9 +41,15 @@ namespace pmgd {
   #define MSG_DEBUG_PREFIX MSG_COLOR_BLUE "DEBUG:" MSG_COLOR_RESET
   #define MSG_VERBOSE_PREFIX MSG_COLOR_CYAN "VERBOSE:" MSG_COLOR_RESET
 
-  std::string msg_trace(const std::source_location& location = std::source_location::current()){
-    return std::string(location.file_name()) + ":" + std::to_string(location.line()) + ":" + location.function_name() + ":";
-  }
+  #ifdef USE_SOURCE_TRACE
+    std::string msg_trace(const std::source_location& location = std::source_location::current()){
+      return std::string(location.file_name()) + ":" + std::to_string(location.line()) + ":" + location.function_name() + ":";
+    }
+  #else
+    std::string msg_trace(){
+      return std::string(__FUNCTION__) + ":";
+    }
+  #endif
 
   std::string msg_short_trace(const std::source_location& location = std::source_location::current()){
     return std::string(location.file_name()) + ":" + std::to_string(location.line()) + ":";

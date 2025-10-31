@@ -13,7 +13,9 @@
 #include "pmgdlib_core.h"
 #include "pmgdlib_string.h"
 
-#include "tinyxml2.h"
+#ifdef USE_TINYXML2
+  #include "tinyxml2.h"
+#endif
 
 namespace pmgd {
   // ======= config ====================================================================
@@ -96,55 +98,70 @@ namespace pmgd {
   };
 
   // ======= config loading ====================================================================
-  class TinyXML : public BaseMsg {
-    tinyxml2::XMLDocument doc;
-
-    void ToCfgRec(ConfigItem & item, const tinyxml2::XMLElement* head){
-      /// add attributes
-      for (const tinyxml2::XMLAttribute* attr = head->FirstAttribute(); attr; attr = attr->Next()) {
-        const char* name = attr->Name();
-        const char* value = attr->Value();
-        item.AddAttribute(name, value);
-      }
-
-      /// add childs
-      for (const tinyxml2::XMLElement* child = head->FirstChildElement(); child; child = child->NextSiblingElement()) {
-        const char* name = child->Name();
-        ConfigItem child_item ;
-        child_item.type = name;
-        ToCfgRec(child_item, child);
-        item.Add(name, child_item);
-      }
-    }
-
-    public:
-    /// predefined function to load xml into internal cfg format
-    void ToCfg(Config & cfg){
-      for (const tinyxml2::XMLElement* child = doc.FirstChildElement(); child; child = child->NextSiblingElement()) {
-        const char* name = child->Name();
-        ConfigItem child_item;
-        child_item.type = name;
-        ToCfgRec(child_item, child);
-        cfg.Add(name, child_item);
-      }
-    }
-
-    TinyXML(const std::string & raw){
-      doc.Parse(raw.c_str());
-      tinyxml2::XMLError error = doc.Parse(raw.c_str());
-      if( error ){
-        // check_tinyxml_error(error, cfg_path);
-        msg_error(error);
-      }
-    }
-  };
-
   class ConfigLoader : public BaseMsg {
     public:
-    Config LoadXmlCfg(const std::string & raw);
-    SysOptions GetSysOptions(const Config & cfg);
+    virtual Config LoadXmlCfg(const std::string & raw){
+      Config cfg;
+      return cfg;
+    }
+
+    SysOptions GetSysOptions(const Config & cfg){
+      SysOptions sysopt;
+      std::vector<ConfigItem> items = cfg.Get("sys");
+      for(auto item : items){
+        if(item.HasAttribute("screen_width")) sysopt.screen_width = item.AttributeI("screen_width");
+        if(item.HasAttribute("screen_height")) sysopt.screen_height = item.AttributeI("screen_height");
+        if(item.HasAttribute("multimedia_library")) sysopt.multimedia_library = item.Attribute("multimedia_library");
+        if(item.HasAttribute("accelerator")) sysopt.accelerator = item.Attribute("accelerator");
+        if(item.HasAttribute("io_backend")) sysopt.io = item.Attribute("io_backend");
+        if(item.HasAttribute("img_backend")) sysopt.img = item.Attribute("img_backend");
+      }
+      return sysopt;
+    }
   };
 
+  #ifdef USE_TINYXML2
+    class TinyXmlConfigLoader : public ConfigLoader {
+      tinyxml2::XMLDocument doc;
+
+      void ToCfgRec(ConfigItem & item, const tinyxml2::XMLElement* head){
+        /// add attributes
+        for (const tinyxml2::XMLAttribute* attr = head->FirstAttribute(); attr; attr = attr->Next()) {
+          const char* name = attr->Name();
+          const char* value = attr->Value();
+          item.AddAttribute(name, value);
+        }
+
+        /// add childs
+        for (const tinyxml2::XMLElement* child = head->FirstChildElement(); child; child = child->NextSiblingElement()) {
+          const char* name = child->Name();
+          ConfigItem child_item ;
+          child_item.type = name;
+          ToCfgRec(child_item, child);
+          item.Add(name, child_item);
+        }
+      }
+
+      public:
+      /// predefined function to load xml into internal cfg format
+      void ToCfg(Config & cfg){
+        for (const tinyxml2::XMLElement* child = doc.FirstChildElement(); child; child = child->NextSiblingElement()) {
+          const char* name = child->Name();
+          ConfigItem child_item;
+          child_item.type = name;
+          ToCfgRec(child_item, child);
+          cfg.Add(name, child_item);
+        }
+      }
+
+      virtual Config LoadXmlCfg(const std::string & raw){
+        Config cfg;
+        doc.Parse(raw.c_str());
+        ToCfg(cfg);
+        return cfg;
+      }
+    };
+  #endif
 };
 
 #endif

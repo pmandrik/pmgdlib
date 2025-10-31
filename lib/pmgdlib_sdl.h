@@ -365,6 +365,12 @@ namespace pmgd {
       window->window = SDL_CreateWindow("SDL2", 
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
         opts.screen_width, opts.screen_height, window_flag);
+
+      if(window->window == NULL){
+        msg_error("SDL_CreateWindow():", SDL_GetError());
+      } else {
+        msg_debug("SDL_CreateWindow(): ok");
+      }
       
       if(opts.gl)
         window->gl_context = SDL_GL_CreateContext(window->window);

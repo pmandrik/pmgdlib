@@ -9,6 +9,8 @@
 #include "pmgdlib_msg.h"
 #include "pmgdlib_math.h"
 #include "pmgdlib_string.h"
+#include "pmgdlib_graph.h"
+#include "pmgdlib_storage.h"
 #include <stack>
 
 namespace pmgd {
@@ -152,11 +154,12 @@ namespace pmgd {
   };
 
   struct TextureDrawData {
-    v2 pos, size;
+    v2 pos = v2(0,0), size = v2(0.5,0.5);
     v2 tpos = v2(0,0), tsize = v2(1,1);
     float angle = 0;
     bool flip_x = false, flip_y = false;
 
+    TextureDrawData(){}
     TextureDrawData(v2 pos, v2 size){
       this->pos = pos;
       this->size = size;
@@ -361,18 +364,88 @@ namespace pmgd {
 
   class Window {};
 
-  class Scene : public BaseMsg {
+  class ScenePipeline : public BaseMsg {
+    PipelineGraph<std::string> pg;
+    std::vector<std::string*> pipeline;
+
+    public:
+    bool builded = false;
+
+    int AddChain(const std::string & chain){
+      builded = false;
+      return add_strdata_to_pipeline(chain, pg);
+    }
+
+    int Build(){
+      pipeline = pg.GetPipeline();
+      msg_verbose(join_string_ptrs(pipeline));
+      builded = true;
+      return pipeline.size() ? PM_SUCCESS : PM_ERROR;
+    }
+  };
+
+  class FrameDrawer : public BaseMsg {
+  };
+
+  class TextureDrawer : public BaseMsg {
+    public:
+    std::string shader_id, texture_id;
+    TextureDrawData data;
+    Texture *texture;
+    Shader *shader;
+    TextureDrawer(){};
+    virtual void Draw(){}
+    virtual ~TextureDrawer(){};
+  };
+
+  class Scene : public DataContainer {
+    std::string active_pipeline_id;
+    ScenePipeline * active_pipeline = nullptr;
+
     public:
     std::string id;
-
     Scene(const std::string & id){
       this->id = id;
     }
+    virtual ~Scene(){};
 
-    int AddPipeline(const std::string & pipeline_id, const std::string & chain){
-      msg_debug("add", quote(pipeline_id), quote(chain));
+    int Warm(){
+      /// Warm up pipelines
+      std::vector<std::shared_ptr<ScenePipeline>> pipelines = Objects<ScenePipeline>();
+      int ret_tot = PM_SUCCESS;
+      for(auto pipeline : pipelines){
+        int ret = pipeline->Build();
+        if(ret != PM_SUCCESS){
+          ret_tot = ret;
+        }
+      }
+      return ret_tot;
+    }
+
+    int SetPipeline(std::string & key){
+      std::shared_ptr<ScenePipeline> pipeline = Get<ScenePipeline>(key);
+
+      if(pipeline == nullptr){
+        msg_warning("Scene", quote(id), "does not have pipeline", quotec(key));
+        return PM_ERROR_404;
+      }
+      active_pipeline_id = key;
+      active_pipeline = Get<ScenePipeline>(key).get();
       return PM_SUCCESS;
     }
+  };
+
+  class SceneRender : public BaseMsg {
+    public:
+    virtual void Draw(std::shared_ptr<Scene> scene){
+      /// Draw Cycle (unoptimized)
+      /// 1. set target
+      /// 2. bind source (shader, texture, buffers)
+      /// 3. blit source
+      /// 4. unbind source
+      /// 5. unset target
+    }
+    virtual ~SceneRender(){};
   };
 
   class SysFactory {
@@ -387,6 +460,9 @@ namespace pmgd {
     virtual int InitAccel(const SysOptions & opts){return PM_SUCCESS;}
     virtual std::shared_ptr<Texture> MakeTexture(std::shared_ptr<Image> img) {return nullptr;}
     virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt) {return nullptr;}
+    virtual std::shared_ptr<FrameDrawer> MakeFrameDrawer(){return nullptr;}
+    virtual std::shared_ptr<TextureDrawer> MakeTextureDrawer(){return nullptr;}
+    virtual std::shared_ptr<SceneRender> MakeSceneRender(){return nullptr;}
     virtual ~AccelFactory() {};
   };
 };

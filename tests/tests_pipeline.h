@@ -5,7 +5,7 @@
 #ifndef TEST_PIPELINE_HH
 #define TEST_PIPELINE_HH 1
 
-#include "pmgdlib_pipeline.h"
+#include "pmgdlib_graph.h"
 
 void make_linear_graph(PipelineGraph<int> & pg, int start_index = 0){
   // 0->1->2->3->4->5->6->7->8->9
@@ -152,27 +152,35 @@ TEST(pmlib_pipeline, tree_graph) {
   EXPECT_EQ(*pl.at(12), 1);
 }
 
-std::string chains_to_pipelines(std::string str){
-  data_string_to_pipeline data;
-  string_to_pipeline(str, data);
-
+std::string project_chains_to_pipeline_list(std::string str){
   PipelineGraph<std::string> pg;
-  for(auto node : data.nodes){
-    pg.AddNode(node);
-  }
-
-  for(auto edge : data.edges){
-    pg.AddEdge(edge.first, edge.second);
-  }
+  add_strdata_to_pipeline(str, pg);
 
   std::vector<std::string*> pl = pg.GetPipeline();
   return join_string_ptrs(pl);
 }
 
-TEST(pmlib_pipeline, string_to_pipeline) {
-  EXPECT_EQ(chains_to_pipelines("  A->B->C,  X->A, D->X    "), "DXABC");
-  EXPECT_EQ(chains_to_pipelines("MAPA->DANA(   XXX  )->CAMO-MILE,XXX->MAPA"), "XXXMAPADANA(   XXX  )CAMO-MILE");
+std::string project_chains_to_pipeline_list_sg(std::string str){
+  PipelineGraph<std::string> pg;
+  add_strdata_to_pipeline(str, pg);
 
+  std::vector<PgNodePrimitive<std::string>> pls = pg.GetPipelineSourceGrouped();
+  std::string answer;
+  for(size_t i = 0; i < pls.size(); ++i){
+    PgNodePrimitive<std::string> pl = pls[i];
+    answer += pl.source + "->" + pl.target;
+    if(i != pls.size()-1) answer += ",";
+  }
+  return answer;
+}
+
+TEST(pmlib_pipeline, string_to_pipeline) {
+  EXPECT_EQ(project_chains_to_pipeline_list("  A->B->C,  X->A, D->X    "), "DXABC");
+  EXPECT_EQ(project_chains_to_pipeline_list("MAPA->DANA(   XXX  )->CAMO-MILE,XXX->MAPA"), "XXXMAPADANA(   XXX  )CAMO-MILE");
+}
+
+TEST(pmlib_pipeline, GetPipelineSourceGrouped) {
+  EXPECT_EQ(project_chains_to_pipeline_list_sg("A->B->C,A->C"), "A->B,A->C,B->C");
 }
 
 #endif

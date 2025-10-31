@@ -7,7 +7,7 @@
 
 namespace pmgd {
 
-  //! Ticker class around `itime` counter going from [0, MAX_TIME]
+  //! Ticker class around `itime` counter going [0, MAX_TIME]
   class Ticker {
     public:
       Ticker(){};

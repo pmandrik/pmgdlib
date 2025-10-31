@@ -39,3 +39,9 @@ one-liner
 ```
 meson compile; meson test;
 ```
+
+### TODO LIST
+1. add LoadFrameDrawer
+2. add LoadTextureDrawer
+3. move confit.h -> config.cpp 
+4. Pipeline should be more clear,  should give information about the source and target

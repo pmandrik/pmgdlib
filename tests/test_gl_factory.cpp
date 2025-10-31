@@ -79,31 +79,41 @@ TEST_F(TestSuite, factory_sys) {
     <shader id="s1" vert="../data/shaders/default/def.vert" frag="../data/shaders/default/def.frag"/>
 
     <!-- scene --> 
-    <scene id="scene"/>
+    <scene id="scene">
       <texture_drawer id="td1" texture="t1" once="1"/>
       <texture_drawer id="td2" texture="t2" shader="s1"/>
 
-      <frame_buffer id="fb1" shader="s1"/>
+      <frame_drawer id="fd1" shader="s1"/>
 
       <pipeline id="default">
-        <chain value="td1->fb1"/>
-        <chain value="td2->fb1->screen"/>
-      </slaChain>
+        <chain data="td1->fd1"/>
+        <chain data="td2->fd1->screen"/>
+      </pipeline>
     </scene>
   )";
 
   ConfigLoader cfg_loader;
   Config cfg = cfg_loader.LoadXmlCfg(cfg_raw);
   SysOptions options = cfg_loader.GetSysOptions(cfg);
-  cout << options.AsString() << endl;
   Backend backend = get_backend(options);
 
   shared_resource_->window = backend.factory->CreateWindow(options);
-
   SceneDataLoader loader(backend);
-  loader.Load(cfg);
-  auto shader = loader.dc.Get<Shader>("s1");
-  EXPECT_TRUE(shader != nullptr);
+  EXPECT_TRUE(loader.Load(cfg) == PM_SUCCESS);
+  EXPECT_TRUE(loader.dc.Get<Texture>("t1") != nullptr);
+  EXPECT_TRUE(loader.dc.Get<Texture>("t2") != nullptr);
+  EXPECT_TRUE(loader.dc.Get<Shader>("s1") != nullptr);
+  EXPECT_TRUE(loader.dc.Get<Scene>("scene") != nullptr);
+
+  auto scene = loader.dc.Get<Scene>("scene");
+  auto td1 = scene->Get<TextureDrawer>("td1");
+  auto td2 = scene->Get<TextureDrawer>("td2");
+  auto fd1 = scene->Get<FrameDrawer>("fd1");
+  EXPECT_TRUE(td1 != nullptr);
+  EXPECT_TRUE(td2 != nullptr);
+  EXPECT_TRUE(fd1 != nullptr);
+
+  EXPECT_TRUE(scene->Warm() == PM_SUCCESS);
 
   SDL_Delay(1000);
 }

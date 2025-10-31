@@ -7,7 +7,12 @@ cpp_args=['-Wfatal-errors']
 add_project_arguments(cpp_args, language: ['cpp'])
 cpp = meson.get_compiler('cpp')
 
-test_inc = include_directories('./')
+test_inc = include_directories('./lib')
+pmgdlib_sources = [
+  './lib/pmgdlib_string.cpp',
+  './lib/pmgdlib_graph.cpp',
+  './lib/pmgdlib_config.cpp'
+]
 core_deps = [test_inc]
 core_links = []
 
@@ -52,6 +57,14 @@ endif
 
 # stb
 stb_includes = '../external/stb/.'
+
+# pmgdlib
+pmgdlib = shared_library('pmgdlib', 
+  pmgdlib_sources,
+  include_directories: core_deps, 
+  link_with: core_links
+)
+core_links += [pmgdlib]
 
 subdir('tests')
 subdir('apps')

@@ -28,7 +28,7 @@ if USE_STB
 endif
 
 all_testes = executable('all_tests', 
-  'tests_main.cpp', 
+  'tests_main.cpp',
   include_directories: core_deps, 
   dependencies: gtest, 
   link_with : core_links

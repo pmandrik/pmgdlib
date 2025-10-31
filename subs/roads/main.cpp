@@ -3,22 +3,33 @@ Components:
  - grid map AxB, generator of start map
  - queue of tiles (railroads) to put on map; 4 first tiles are available + number of hiden tiles in the queue are shown
  - start houses with output railroads
-*/
 
-/*
 Actions:
  - select tile from first 4 tiles
  - place on board connecting to existed road and optionally rotate
  - when connect two houses - get points and extra tiles to the queue
  - if queue is empty - uncconnected house railroad will be replaced with car road
  - save map, continue map
+
+Drawers:
+ - draw background
+ - draw all bottom level elements (buttoms, static tiles on map)
+ - draw all top level elements (tiles on motion, dynamic elements on map (trains))
+ - particles system
+pipeline = {background -> w, aqd -> w, aqd -> w, p -> window}
 */
 
 #include <vector>
 #include <stack>
 #include <memory>
+
+#define USE_SDL
+
 #include "pmgdlib_msg.h"
 #include "pmgdlib_math.h"
+#include "pmgdlib_core.h"
+#include "pmgdlib_factory.h"
+#include "pmgdlib_sdl.h"
 
 using namespace std;
 using namespace pmgd;
@@ -269,5 +280,21 @@ class Game {
 };
 
 int main(){
+    SysOptions bo;
+    bo.io = "SDL";
+    bo.multimedia_library = "SDL";
+    Backend bk = get_backend(bo);
+
+    bk.factory->sys_imp->verbose_lvl = pmgd::verbose::VERBOSE;
+
+    std::shared_ptr<Window> wx = bk.factory->CreateWindow(bo);
+    std::shared_ptr<WindowSDL> w = std::dynamic_pointer_cast<WindowSDL>(wx);
+
+    SDL_Window * window = w->window;
+
     Game game();
+
+    for(int i = 0; i < 100; i++){
+        SDL_Delay(20);
+    }
 }

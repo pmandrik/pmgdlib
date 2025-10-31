@@ -53,17 +53,23 @@ namespace pmgd {
     }
     #endif
 
-    #ifdef USE_SDL
     if(options.io == "SDL"){
-      msg_debug("use SDL IO backend");
-      back.io->txt_imp = std::make_shared<IoTxtSDL>();
+      #ifdef USE_SDL
+        msg_debug("use SDL IO backend");
+        back.io->txt_imp = std::make_shared<IoTxtSDL>();
+      #else
+        msg_warning("to use SDL IO recompile sources with -DUSE_SDL");
+      #endif
     }
 
     if(options.multimedia_library == "SDL"){
-      msg_debug("use SDL multimedia backend");
-      back.factory->sys_imp = std::make_shared<SysFactorySDL>();
+      #ifdef USE_SDL
+        msg_debug("use SDL multimedia backend");
+        back.factory->sys_imp = std::make_shared<SysFactorySDL>();
+      #else
+        msg_warning("to use SDL multimedia_library recompile sources with -DUSE_SDL");
+      #endif
     }
-    #endif
 
     #ifdef USE_STB
     if(options.img == "STB"){

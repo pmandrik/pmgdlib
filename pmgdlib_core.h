@@ -359,7 +359,10 @@ namespace pmgd {
     }
   };
 
-  class Window {};
+  class Window {
+    public:
+    virtual ~Window() {}
+  };
 
   class Scene : public BaseMsg {
     public:
@@ -375,7 +378,7 @@ namespace pmgd {
     }
   };
 
-  class SysFactory {
+  class SysFactory : public BaseMsg {
     public:
     virtual std::shared_ptr<Window> CreateWindow(const SysOptions & opts) {return nullptr;}
     virtual ~SysFactory() {};

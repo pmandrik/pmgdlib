@@ -23,7 +23,7 @@ namespace pmgd {
   };
 
   int & msg_verbose_lvl(){
-    static int def_verbose_lvl = verbose::INFO;
+    static int def_verbose_lvl = verbose::DEBUG;
     return def_verbose_lvl;
   };
 

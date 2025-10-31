@@ -4,6 +4,7 @@
 ### SDL
 https://github.com/libsdl-org/SDL/releases/tag/release-2.30.3
 ```
+sudo apt get install libx11-dev libxext-dev # SDL_X11
 sudo apt-get install pkg-config cmake g++
 sudo apt-get install libasound2-dev
 

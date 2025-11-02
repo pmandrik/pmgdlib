@@ -164,11 +164,11 @@ std::string project_chains_to_pipeline_list_sg(std::string str){
   PipelineGraph<std::string> pg;
   add_strdata_to_pipeline(str, pg);
 
-  std::vector<PgNodePrimitive<std::string>> pls = pg.GetPipelineSourceGrouped();
+  std::vector<PgNodePrimitive<std::string>> pls = pg.GetPipelineGroupSource();
   std::string answer;
   for(size_t i = 0; i < pls.size(); ++i){
     PgNodePrimitive<std::string> pl = pls[i];
-    answer += pl.source + "->" + pl.target;
+    answer += pl.AsString();
     if(i != pls.size()-1) answer += ",";
   }
   return answer;
@@ -179,7 +179,7 @@ TEST(pmlib_pipeline, string_to_pipeline) {
   EXPECT_EQ(project_chains_to_pipeline_list("MAPA->DANA(   XXX  )->CAMO-MILE,XXX->MAPA"), "XXXMAPADANA(   XXX  )CAMO-MILE");
 }
 
-TEST(pmlib_pipeline, GetPipelineSourceGrouped) {
+TEST(pmlib_pipeline, GetPipelineGroupSource) {
   EXPECT_EQ(project_chains_to_pipeline_list_sg("A->B->C,A->C"), "A->B,A->C,B->C");
 }
 

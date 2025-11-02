@@ -9,6 +9,7 @@
 #include <set>
 #include <unordered_map>
 #include <string>
+#include <iostream>
 
 #include "pmgdlib_string.h"
 #include "pmgdlib_defs.h"
@@ -20,6 +21,8 @@ namespace pmgd {
   struct PgNodePrimitive {
     NODE_ID_TYPE source;
     NODE_ID_TYPE target;
+
+    std::string AsString(){ return std::string(source) + "->" + std::string(target); }
   };
 
   //! PipelineGraph:
@@ -36,7 +39,7 @@ namespace pmgd {
     private:
       class Node {
         public:
-          Node(NODE_ID_TYPE id, int priority){this->id = id; this->local_priority = local_priority;}
+          Node(NODE_ID_TYPE id, int priority){this->id = id; this->local_priority = priority;}
           NODE_ID_TYPE id;
           int local_priority;
           int priority = 0;
@@ -196,7 +199,7 @@ namespace pmgd {
 
       //! build pipeline-correct vector of elements pairs {source, target}
       //! e.g. A->B->C,A->D->C will give [{A,B},{A,D},{B,C},{D,C}]
-      std::vector<PgNodePrimitive<NODE_ID_TYPE>> GetPipelineSourceGrouped(){
+      std::vector<PgNodePrimitive<NODE_ID_TYPE>> GetPipelineGroupSource(){
         std::vector<NODE_ID_TYPE*> pipeline = GetPipeline();
         std::vector<PgNodePrimitive<NODE_ID_TYPE>> answer;
         for(auto id: pipeline){

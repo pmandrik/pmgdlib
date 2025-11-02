@@ -438,24 +438,7 @@ namespace pmgd {
     }
   };
 
-<<<<<<< HEAD:lib/pmgdlib_core.h
-  class SceneRender : public BaseMsg {
-    public:
-    virtual void Draw(std::shared_ptr<Scene> scene){
-      /// Draw Cycle (unoptimized)
-      /// 1. set target
-      /// 2. bind source (shader, texture, buffers)
-      /// 3. blit source
-      /// 4. unbind source
-      /// 5. unset target
-    }
-    virtual ~SceneRender(){};
-  };
-
-  class SysFactory {
-=======
   class SysFactory : public BaseMsg {
->>>>>>> master:pmgdlib_core.h
     public:
     virtual std::shared_ptr<Window> CreateWindow(const SysOptions & opts) {return nullptr;}
     virtual ~SysFactory() {};
@@ -469,7 +452,7 @@ namespace pmgd {
     virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt) {return nullptr;}
     virtual std::shared_ptr<FrameDrawer> MakeFrameDrawer(){return nullptr;}
     virtual std::shared_ptr<TextureDrawer> MakeTextureDrawer(){return nullptr;}
-    virtual std::shared_ptr<SceneRender> MakeSceneRender(){return nullptr;}
+    // virtual std::shared_ptr<SceneRender> MakeSceneRender(){return nullptr;}
     virtual ~AccelFactory() {};
   };
 };

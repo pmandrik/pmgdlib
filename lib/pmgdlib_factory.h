@@ -4,6 +4,7 @@
 
 #include "pmgdlib_string.h"
 #include "pmgdlib_core.h"
+#include "pmgdlib_core_render.h"
 #include "pmgdlib_config.h"
 #include "pmgdlib_image.h"
 
@@ -44,8 +45,8 @@ namespace pmgd {
     template<typename... Args> std::shared_ptr<TextureDrawer>
     MakeTextureDrawer(Args... args){return accel_imp->MakeTextureDrawer(std::forward<Args>(args)...);}
 
-    template<typename... Args> std::shared_ptr<SceneRender>
-    MakeSceneRender(Args... args){return accel_imp->MakeSceneRender(std::forward<Args>(args)...);}
+    //template<typename... Args> std::shared_ptr<SceneRender>
+    //MakeSceneRender(Args... args){return accel_imp->MakeSceneRender(std::forward<Args>(args)...);}
   };
 
   class Backend {
@@ -288,7 +289,51 @@ namespace pmgd {
     }
   };
 
+  class Builder : public BaseMsg {
+    std::shared_ptr<DataContainer> dc = nullptr;
 
+    public:
+    void SetDataSource(std::shared_ptr<DataContainer> dc_){ dc = dc_; }
+
+    auto BuildGraph(std::string chain){
+      auto pg = std::make_shared<PipelineGraph<std::string>>();
+      int ret = add_strdata_to_pipeline(chain, *pg);
+      if(ret != PM_SUCCESS){
+        msg_error("failed to build pipeline fromn chain", quote(chain));
+      }
+      return pg;
+    }
+
+    auto BuildRenderPipeline(std::shared_ptr<PipelineGraph<std::string>> gr){
+      auto p = std::make_shared<RenderPipeline>();
+      if(dc == nullptr){
+        msg_error("DataContainer is nullptr");
+        return p;
+      }
+      auto parts = gr->GetPipelineGroupSource();
+      for(auto part : parts){
+        std::string source_id = part.source;
+        std::string target_id = part.target;
+        auto source = dc->Get<Drawable>(source_id);
+        auto target = dc->Get<Drawable>(target_id);
+      
+        if(source == nullptr){
+          msg_error("DataContainer can't find", quotec(source_id), "skip node");
+          continue;
+        }
+        if(target == nullptr){
+          msg_error("DataContainer can't find", quotec(target_id), "skip node");
+          continue;
+        }
+
+        RenderPipelineItem pi;
+        pi.source = source.get();
+        pi.target = target.get();
+        p->AddItem(pi);
+      }
+      return p;
+    }
+  };
 };
 
 #endif

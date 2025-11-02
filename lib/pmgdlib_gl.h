@@ -820,24 +820,24 @@ glVertex3f
     }
   };
 
-  class SceneRenderGl: public SceneRender {
-    std::shared_ptr<QuadsArrayGl> screen_qad;
-    std::shared_ptr<ShaderGl> default_shader;
+  // class SceneRenderGl: public SceneRender {
+  //   std::shared_ptr<QuadsArrayGl> screen_qad;
+  //   std::shared_ptr<ShaderGl> default_shader;
 
-    public:
-    SceneRenderGl(){
-      /// "screen_qad" is used to draw 1 full screen frame to screen or another framebuffer
-      screen_qad = std::make_shared<QuadsArrayGl>(1);
+  //   public:
+  //   SceneRenderGl(){
+  //     /// "screen_qad" is used to draw 1 full screen frame to screen or another framebuffer
+  //     screen_qad = std::make_shared<QuadsArrayGl>(1);
 
-      /// "default_shader" is used to draw when no other shaders were provided
-      /// it is mandatory for OpenGL
-      default_shader; // TODO
-    }
+  //     /// "default_shader" is used to draw when no other shaders were provided
+  //     /// it is mandatory for OpenGL
+  //     default_shader; // TODO
+  //   }
 
-    virtual void Draw(std::shared_ptr<Scene> scene){
+  //   virtual void Draw(std::shared_ptr<Scene> scene){
       
-    }
-  };
+  //   }
+  // };
 
   // ======= object maker ====================================================================
   class AccelFactoryGL : public AccelFactory {
@@ -886,9 +886,9 @@ glVertex3f
     virtual std::shared_ptr<TextureDrawer> MakeTextureDrawer(){
       return std::make_shared<TextureDrawerGl>(); 
     }
-    virtual std::shared_ptr<SceneRender> MakeSceneRender(){
-      return std::make_shared<SceneRenderGl>(); 
-    }
+    //virtual std::shared_ptr<SceneRender> MakeSceneRender(){
+    //  return std::make_shared<SceneRenderGl>(); 
+    //}
   };
 };
 

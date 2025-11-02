@@ -11,8 +11,6 @@
 #include "pmgdlib_core.h"
 #include "pmgdlib_config.h"
 
-#include "tinyxml2.h"
-
 namespace pmgd {
   // ======= ConfigItem ====================================================================
   void ConfigItem::AddAttribute(const std::string & name, const std::string & value)  { attributes[name] = value; }
@@ -192,8 +190,6 @@ namespace pmgd {
   // ======= ConfigLoader ====================================================================
   Config ConfigLoader::LoadXmlCfg(const std::string & raw){
     Config cfg;
-    TinyXML txml = TinyXML(raw);
-    txml.ToCfg(cfg);
     return cfg;
   }
 

@@ -22,10 +22,7 @@ namespace pmgd {
     VERBOSE
   };
 
-  int & msg_verbose_lvl(){
-    static int def_verbose_lvl = verbose::DEBUG;
-    return def_verbose_lvl;
-  };
+  int & msg_verbose_lvl();
 
   #define MSG_COLOR_RED     "\x1b[31m"
   #define MSG_COLOR_GREEN   "\x1b[32m"
@@ -42,18 +39,12 @@ namespace pmgd {
   #define MSG_VERBOSE_PREFIX MSG_COLOR_CYAN "VERBOSE:" MSG_COLOR_RESET
 
   #ifdef USE_SOURCE_TRACE
-    std::string msg_trace(const std::source_location& location = std::source_location::current()){
-      return std::string(location.file_name()) + ":" + std::to_string(location.line()) + ":" + location.function_name() + ":";
-    }
+    std::string msg_trace(const std::source_location& location = std::source_location::current());
+    std::string msg_short_trace(const std::source_location& location = std::source_location::current());
   #else
-    std::string msg_trace(){
-      return std::string(__FUNCTION__) + ":";
-    }
+    std::string msg_trace();
+    std::string msg_short_trace();
   #endif
-
-  std::string msg_short_trace(const std::source_location& location = std::source_location::current()){
-    return std::string(location.file_name()) + ":" + std::to_string(location.line()) + ":";
-  }
 
   #define msg_error(...)   if(verbose_lvl >= pmgd::verbose::ERROR)   pmgd::msg_err(MSG_ERROR_PREFIX, msg_trace(), __VA_ARGS__)
   #define msg_warning(...) if(verbose_lvl >= pmgd::verbose::WARNING) pmgd::msg_err(MSG_WARNING_PREFIX, msg_trace(), __VA_ARGS__)
@@ -74,14 +65,14 @@ namespace pmgd {
   #define msg_nt_verbose(...) if(verbose_lvl >= pmgd::verbose::VERBOSE) pmgd::msg(MSG_VERBOSE_PREFIX, __VA_ARGS__)
 
   // ======= msg ====================================================================
-  void msg(){ std::cout << std::endl; };
+  void msg();
   template<typename T> void msg(T t) { std::cout << t << std::endl; }
   template<typename T, typename... Args> void msg(T t, Args... args){
     std::cout << t << " ";
     msg(args...);
   }
 
-  void msg_nll(){};
+  void msg_nll();
   template<typename T> void msg_nll(T t) { std::cout << t; }
   template<typename T, typename... Args> void msg_nll(T t, Args... args){
     std::cout << t << " ";
@@ -95,14 +86,14 @@ namespace pmgd {
   }
 
   // ======= msg_err ====================================================================
-  void msg_err(){ std::cerr << std::endl; };
+  void msg_err();
   template<typename T> void msg_err(const T & t) { std::cerr << t << std::endl; }
   template<typename T, typename... Args> void msg_err(const T & t, Args... args){
     std::cerr << t << " ";
     msg_err(args...);
   }
 
-  void msg_err_nll(){};
+  void msg_err_nll();
   template<typename T> void msg_err_nll(T t) { std::cerr << t << std::endl; }
   template<typename T, typename... Args> void msg_err_nll(T t, Args... args){
     std::cerr << t << " ";

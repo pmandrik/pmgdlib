@@ -6,6 +6,7 @@
 #include "tests_time.h"
 #include "tests_pipeline.h"
 #include "tests_config.h"
+#include "tests_core.h"
 
 #include "tests_data.h"
 

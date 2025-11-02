@@ -9,7 +9,9 @@ cpp = meson.get_compiler('cpp')
 test_inc = include_directories('./lib')
 pmgdlib_sources = [
   './lib/pmgdlib_string.cpp',
+  './lib/pmgdlib_msg.cpp',
   './lib/pmgdlib_graph.cpp',
+  './lib/pmgdlib_core_render.cpp',
   './lib/pmgdlib_config.cpp'
 ]
 core_deps = [test_inc]

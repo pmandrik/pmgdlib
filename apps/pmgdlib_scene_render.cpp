@@ -26,16 +26,16 @@ int main(int argc, char** argv){
   /// Read cfg txt.
   SysOptions bo;
   bo.io = "SDL";
-  Backend bk = get_backend(bo);
-  std::string cfg_raw = bk.io->ReadTxt(cfg_path);
+  auto bk = get_backend(bo);
+  std::string cfg_raw = bk->ReadTxt(cfg_path);
 
   /// Load cfg from xml.
   ConfigLoader cl;
   Config cfg = cl.LoadXmlCfg(cfg_raw);
 
   /// Parce scene definition, load images, load shaders, construct scene objects.
-  // shared_resource_->window = backend.factory->CreateWindow(options);
-  //SceneDataLoader loader(bk);
+  // shared_resource_->window = backend.factory->MakeWindow(options);
+  //ProtoLoader loader(bk);
   //int ret = loader.Load(cfg);
   //if(ret != PM_SUCCESS) return ret;
 

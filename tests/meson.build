@@ -10,21 +10,17 @@ endif
 # use spdlog
 if false
   spdlog_inc = include_directories('../external')
-  core_deps += [spdlog_inc]
+  core_incs += [spdlog_inc]
 endif
 
 # use tinyxml2
 if USE_TINYXML2
-  core_deps += [tinyxml2_inc]
-endif
-
-if USE_STB
-  core_deps += [stb_includes]
+  core_incs += [tinyxml2_inc]
 endif
 
 all_testes = executable('all_tests', 
   'tests_main.cpp',
-  include_directories: core_deps, 
+  include_directories: core_incs, 
   dependencies: gtest, 
   link_with : core_links
 )
@@ -55,7 +51,7 @@ if TEST_SDL
   sdl_tests = ['test_sdl_core']
   foreach sdl_test : sdl_tests
     test_exec = executable(sdl_test, sdl_test + '.cpp', 
-      include_directories: core_deps + [sdl2_inc], 
+      include_directories: core_incs + [sdl2_inc], 
       dependencies: [sdl2, gtest], 
       link_with : core_links
     )
@@ -67,7 +63,7 @@ if TEST_SDL
     sdl_tests = ['test_sdl_gl', 'test_sdl_gl_pmgdlib', 'test_gl_factory']
     foreach sdl_test : sdl_tests
       test_exec = executable(sdl_test, sdl_test + '.cpp', 
-        include_directories: core_deps + [sdl2_inc], 
+        include_directories: core_incs + [sdl2_inc], 
         dependencies: [sdl2, gtest, gl], 
         link_with : core_links
       )
@@ -82,7 +78,7 @@ if TEST_SDL
     foreach sdl_test : sdl_tests
       test_exec = executable(sdl_test, 
         sdl_test + '.cpp', 
-        include_directories: core_deps + [sdl2_inc], 
+        include_directories: core_incs + [sdl2_inc], 
         dependencies: [sdl2, gtest, vulkan],
         link_with : core_links
       )

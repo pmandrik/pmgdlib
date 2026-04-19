@@ -27,9 +27,7 @@ pipeline = {background -> w, aqd -> w, aqd -> w, p -> window}
 
 #include "pmgdlib_msg.h"
 #include "pmgdlib_math.h"
-#include "pmgdlib_core.h"
-#include "pmgdlib_factory.h"
-#include "pmgdlib_sdl.h"
+#include "pmgdlib_main.h"
 
 using namespace std;
 using namespace pmgd;
@@ -280,21 +278,41 @@ class Game {
 };
 
 int main(){
-    SysOptions bo;
-    bo.io = "SDL";
-    bo.multimedia_library = "SDL";
-    Backend bk = get_backend(bo);
+  const string pc_cfg_raw = R"(
+      <!-- system -->
+      <sys io_backend="SDL" img_backend="STB"/> 
+      <sys multimedia_library="SDL" accelerator=""/>
+      <sys screen_width="800" screen_height="600"/> 
 
-    bk.factory->sys_imp->verbose_lvl = pmgd::verbose::VERBOSE;
+      <!-- textures -->
+      <texture id="t1" image_path="../data/img.png"/>
+      <texture id="t2" image_path="../data/img.png"/>
+      <texture id="t3" image_path="../data/img.png"/>
 
-    std::shared_ptr<Window> wx = bk.factory->CreateWindow(bo);
-    std::shared_ptr<WindowSDL> w = std::dynamic_pointer_cast<WindowSDL>(wx);
+      <!-- scenes --> 
+      <scene id="game">
+          <drawer id="bg" texture="t1"/>
+          <drawer id="aqd1" texture="t2"/>
+          <drawer id="aqd2" texture="t2"/>
+          <drawer id="ps" texture="t3"/>
 
-    SDL_Window * window = w->window;
+          <pipeline id="default">
+              <chain data="bg->window, aqd1->window, aqd2->window, ps->window"/>
+          </pipeline>
+      </scene>
 
-    Game game();
+      <scene id="menu">
+      </scene>
+  )";
 
-    for(int i = 0; i < 100; i++){
-        SDL_Delay(20);
-    }
+  /*
+  1. load disk XML into memory
+  2. XML into Config
+  3. load config items into protoobjects
+  4. create object from protoobject when warmup
+  */
+
+  Main main(pc_cfg_raw);
+  main.SetScene("game");
+  main.Loop();
 }

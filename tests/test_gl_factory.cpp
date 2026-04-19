@@ -95,10 +95,10 @@ TEST_F(TestSuite, factory_sys) {
   ConfigLoader cfg_loader;
   Config cfg = cfg_loader.LoadXmlCfg(cfg_raw);
   SysOptions options = cfg_loader.GetSysOptions(cfg);
-  Backend backend = get_backend(options);
+  Factory backend = get_factory(options);
 
-  shared_resource_->window = backend.factory->CreateWindow(options);
-  SceneDataLoader loader(backend);
+  shared_resource_->window = backend.factory->MakeWindow(options);
+  ProtoLoader loader(backend);
   EXPECT_TRUE(loader.Load(cfg) == PM_SUCCESS);
   EXPECT_TRUE(loader.dc.Get<Texture>("t1") != nullptr);
   EXPECT_TRUE(loader.dc.Get<Texture>("t2") != nullptr);

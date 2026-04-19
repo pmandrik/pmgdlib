@@ -16,19 +16,19 @@ TEST(pmlib_config, config) {
   EXPECT_EQ(cfg_1.AttributeF("art3"), 1.f);
 
   for(int i = 0; i < 10; i++){
-    ConfigItem data;
-    data.AddAttribute("id", to_string(i));
+    ConfigItem* data = new ConfigItem();
+    data->AddAttribute("id", to_string(i));
     cfg_1.Add("data with id", data);
   }
 
-  vector<ConfigItem> data = cfg_1.Get("data with id");
-  EXPECT_EQ(data.size(), 10);
+  vector<ConfigItem*> datas = cfg_1.Get("data with id");
+  EXPECT_EQ(datas.size(), 10);
 
   vector<string> attrs = cfg_1.GetAttrsFromNested("data with id", "id");
   EXPECT_EQ(attrs.size(), 10);
   EXPECT_EQ(attrs[5], string("5"));
 
-  cfg_1.Merge(data[0]);
+  cfg_1.Merge(datas[0]);
   EXPECT_EQ(cfg_1.Attribute("art1"), "val1");
   EXPECT_EQ(cfg_1.Attribute("id"), "0");
 }

@@ -9,9 +9,9 @@
 #include <SDL_opengl.h>
 
 #include "pmgdlib_core.h"
+#include "pmgdlib_core_render.h"
 
 namespace pmgd {
-
   const int SDL_KSTART = 4;
   const int SDL_KEND   = 231;
   enum key {
@@ -230,17 +230,26 @@ namespace pmgd {
   };
 
   //! Clocker is used to sleep between frames to get given FPS
-  class ClockerSDL {
+  class ClockerSDL : public Clocker {
     public:
-    ClockerSDL(){}
-    ClockerSDL(int fps){ delay = 1000/fps; ntime = SDL_GetTicks(); };
-    float Tick(void){
-      if(delay > SDL_GetTicks() - ntime) SDL_Delay( delay - SDL_GetTicks() + ntime );
-      answer = SDL_GetTicks() - ntime;
-      ntime = SDL_GetTicks();
-      return 1./answer;
+    ClockerSDL(int fps) : Clocker(fps) { delay = 1000/fps; ntime = SDL_GetTicks(); };
+    virtual ~ClockerSDL(){}
+
+    virtual float Tickf(void){
+      tmp = SDL_GetTicks() - ntime;
+      if(delay > tmp) SDL_Delay( delay - tmp );
+      ntime += tmp;
+      return 1./(tmp+OSML);
     }
-    Uint32 delay, ntime, dtime, answer;
+
+    virtual void Tick(void){
+      tmp = SDL_GetTicks() - ntime;
+      if(delay > tmp) SDL_Delay( delay - tmp );
+      ntime += tmp;
+    }
+
+    // milliseconds
+    Uint32 delay, ntime, dtime, tmp;
   };
 
   //! Core is used for following:
@@ -248,21 +257,19 @@ namespace pmgd {
   //! - call ClockerSDL to sleep between frames
   class CoreSDL : public Core {
     SDL_Event game_event;
-    Mouse * mouse;
-    Keyboard * keyboard;
     const Uint8 * kstate;
     bool mouse_locker = false;
-    ClockerSDL clocker_sdl;
 
     public:
-    SDL_Window * window;
     SDL_GLContext glcontext;
 
     CoreSDL(Mouse * mouse, Keyboard * keyboard, int fps) {
       this->mouse = mouse;
       this->keyboard = keyboard;
-      clocker_sdl = ClockerSDL(fps);
+      clocker = new ClockerSDL(fps);
     }
+
+    virtual ~CoreSDL(){}
 
     void CastMouseClick(const SDL_Event & game_event){
       if(mouse_locker) return;
@@ -295,9 +302,9 @@ namespace pmgd {
       }
     }
 
-    void Tick(){
-      /// sleep a litle bit between frames
-      clocker_sdl.Tick();
+    virtual void Tick(){
+      /// call Core->TickCommon()
+      TickCommon();
 
       /// check SDL events & update mouse state
       UpdateMouse();
@@ -347,18 +354,111 @@ namespace pmgd {
     virtual int Write(const std::string & path, const std::string & data){ return write_txt_file_sdl(path, data); };
   };
 
+  SDL_Rect make_sdl_rect(v2 pos, v2 size){
+      SDL_Rect rect;
+      rect.x = pos.x;
+      rect.y = pos.y;
+      rect.w = size.x;
+      rect.h = size.y;
+      return rect;
+    }
+
+  SDL_RendererFlip make_sdl_flip(bool flip_x, bool flip_y){
+    if(flip_x) return SDL_FLIP_HORIZONTAL;
+    if(flip_y) return SDL_FLIP_VERTICAL;
+    return SDL_FLIP_NONE;
+  }
+
+  SDL_Point make_sdl_point(v2 point){
+      SDL_Point p;
+      p.x = point.x;
+      p.y = point.y;
+      return p;
+  }
+
+  class CameraSDL {
+      public:
+      v2 sw, pos = v2();
+      float angle = 0;
+      CameraSDL(v2 sw_){
+        sw = sw_;
+      }
+
+      v2 Transform2D(v2 pos_origin){
+        v2 screen_pos = pos_origin - pos;
+        if(angle){
+          return (screen_pos - sw).Rotated(angle) + sw;
+        }
+        return screen_pos;
+      }
+  };
+
+  class DrawerSDL : public SimpleDrawer {
+    std::unordered_map<int,TextureDrawData*> data;
+    SDL_Renderer *renderer = nullptr;
+    CameraSDL* camera = nullptr;
+    SDL_Texture * texture = nullptr;
+
+    void DrawTextureDrawData(TextureDrawData * tdd){
+      v2 pos = camera->Transform2D(tdd->pos);
+      SDL_Rect srcrect = make_sdl_rect(tdd->tpos, tdd->tsize);
+      SDL_Rect dstrect = make_sdl_rect(pos - tdd->size*0.5, tdd->size);
+      double angle = tdd->angle + camera->angle;
+      SDL_RendererFlip flip = make_sdl_flip(tdd->flip_x, tdd->flip_y);
+      /// https://wiki.libsdl.org/SDL2/SDL_RenderCopyEx
+      int ret = SDL_RenderCopyEx(renderer, texture, &srcrect, &dstrect, angle, NULL, flip);
+    };
+
+    public:
+    DrawerSDL(){};
+    DrawerSDL(SDL_Renderer *renderer_, CameraSDL *camera_, SDL_Texture * texture_){
+      renderer = renderer_;
+      camera = camera_;
+      texture = texture_;
+    }
+
+    virtual unsigned int Add(TextureDrawData * quad_data) {
+      std::uintptr_t uiid = reinterpret_cast<std::uintptr_t>(quad_data);
+      unsigned int id = (int)uiid;
+      data[id] = quad_data;
+      return id;
+    };
+
+    virtual void Clean(){
+      data.clear();
+    };
+
+    virtual void Remove(const unsigned int & id) {
+      auto it = data.find(id);
+      if(it == data.end()) return;
+      data.erase(it);
+    };
+
+    virtual void Draw(){
+      for(auto it = data.begin(); it != data.end(); ++it){
+        TextureDrawData * tdd = it->second;
+        DrawTextureDrawData(tdd);
+      }
+    };
+  };
+
   class WindowSDL : public Window {
     public:
     SDL_Window * window;
     SDL_GLContext gl_context;
   };
+
+  class RenderSDL : public Render {
+    public:
+    SDL_Renderer * renderer;
+  };
   
   class SysFactorySDL: public SysFactory {
     public:
-    virtual std::shared_ptr<Window> CreateWindow(const SysOptions & opts) {
+    virtual std::shared_ptr<Window> MakeWindow(const SysOptions & opts) {
       std::shared_ptr<WindowSDL> window = std::make_shared<WindowSDL>(); 
 
-      int window_flag = 0;
+      int window_flag = SDL_WINDOW_SHOWN;
       if(opts.gl) 
         window_flag |= SDL_WINDOW_OPENGL;
 
@@ -377,8 +477,26 @@ namespace pmgd {
 
       return window;
     }
-  };
 
+    virtual std::shared_ptr<Render> MakeRender(const SysOptions & opts, std::shared_ptr<Window> w){
+      std::shared_ptr<RenderSDL> r = std::make_shared<RenderSDL>();
+      int render_flag = SDL_RENDERER_ACCELERATED;
+      if(opts.soft_render)
+        render_flag = SDL_RENDERER_SOFTWARE;
+        
+      std::shared_ptr<WindowSDL> w_sdl = std::dynamic_pointer_cast<WindowSDL>(w); 
+      r->renderer = SDL_CreateRenderer(w_sdl->window, -1, render_flag);
+      return r;
+    }
+
+    virtual std::shared_ptr<Core> MakeCore(const SysOptions & opts){
+      Mouse * mouse = new Mouse();
+      Keyboard * keyboard = new Keyboard();
+      int fps = opts.fps;
+      std::shared_ptr<CoreSDL> core = std::make_shared<CoreSDL>(mouse, keyboard, fps);
+      return core;
+    }
+  };
 };
 
 #endif

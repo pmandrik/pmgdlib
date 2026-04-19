@@ -6,7 +6,6 @@
 #define PMGDLIB_DEFS_HH 1
 
 namespace pmgd {
-
   //! functions exit codes
   enum {
     PM_SUCCESS = 0,

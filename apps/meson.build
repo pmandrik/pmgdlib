@@ -5,10 +5,6 @@ accel_backend = 'GL'
 test_inc = include_directories('../')
 cpp = meson.get_compiler('cpp')
 
-# sdl2 dependency
-sdl2 = cpp.find_library('SDL2-2.0', dirs : sdl2_build_path)
-sdl2_inc = include_directories(sdl2_include_path)
-
 # cxxopts
 cxxopts_inc = include_directories(cxxopts_include_path)
 

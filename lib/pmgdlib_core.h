@@ -8,16 +8,14 @@
 #include "pmgdlib_defs.h"
 #include "pmgdlib_msg.h"
 #include "pmgdlib_math.h"
+#include "pmgdlib_time.h"
 #include "pmgdlib_string.h"
 #include "pmgdlib_graph.h"
 #include "pmgdlib_storage.h"
 #include <stack>
 
 namespace pmgd {
-
-  class Core {};
-
-  // mouse base class
+  // mouse base class =====================================================================================================
   class Mouse {
     public:
       void Tick(){
@@ -45,7 +43,7 @@ namespace pmgd {
       }
   };
 
-  // keyboard base class
+  // keyboard base class =====================================================================================================
   class Keyboard {
     public:
       Keyboard(){
@@ -101,6 +99,23 @@ namespace pmgd {
       bool keyboard_pressed[232], keyboard_holded[232], keyboard_raised[232];
   };
 
+  // core =====================================================================================================
+  class Core {
+    protected:
+    Clocker* clocker;
+    Mouse* mouse;
+    Keyboard* keyboard;
+
+    void TickCommon(){
+      /// sleep a litle bit between frames
+      clocker->Tick();
+    }
+
+    public:
+    virtual void Tick() = 0;
+    virtual ~Core(){}
+  };
+
   // io related items =====================================================================================================
   class IoTxt {
     public:
@@ -110,10 +125,16 @@ namespace pmgd {
   };
 
   class Image;
-  class IoImage {
+  class IoImage : public BaseMsg {
     public:
-    virtual std::shared_ptr<Image> Read(const std::string & path) {return nullptr;};
-    virtual int Write(const std::string & path, std::shared_ptr<Image> image) {return PM_SUCCESS;};
+    virtual std::shared_ptr<Image> Read(const std::string & path) {
+      msg_warning("function not implemented");
+      return nullptr;
+    };
+    virtual int Write(const std::string & path, std::shared_ptr<Image> image) {
+      msg_warning("function not implemented");
+      return PM_SUCCESS;
+    };
     virtual ~IoImage(){};
   };
 
@@ -136,139 +157,6 @@ namespace pmgd {
   };
 
   // drawing related items =================================================================================================
-  class Texture : public BaseMsg {
-    /// base abstract texture class
-    public:
-    virtual void Bind()   = 0;
-    virtual void Unbind() = 0;
-    virtual ~Texture() {};
-  };
-
-  struct TexTile {
-    /// TexTile store the info about position & size of part of image in Texture normalized to 1. space
-    TexTile() {}
-    TexTile(v2 tp, v2 ts) : tpos(tp), tsize(ts) {}
-    v2 tpos, tsize;
-
-    // TODO void Print(){ msg(__PFN__, pos, size, tpos, tsize); };
-  };
-
-  struct TextureDrawData {
-    v2 pos = v2(0,0), size = v2(0.5,0.5);
-    v2 tpos = v2(0,0), tsize = v2(1,1);
-    float angle = 0;
-    bool flip_x = false, flip_y = false;
-
-    TextureDrawData(){}
-    TextureDrawData(v2 pos, v2 size){
-      this->pos = pos;
-      this->size = size;
-    }
-  };
-
-  class TextureAtlas {
-    private:
-      std::unordered_map<std::string, TexTile> atlas;
-      v2 size;
-
-    public:
-      TexTile * GetTexTile(const std::string & key){
-        auto ptr = atlas.find(key);
-        if(ptr == atlas.end()) return nullptr;
-        return &(ptr->second);
-      }
-
-      void AddTexTile(const std::string & key, const v2 & tp, const v2 & ts){
-        if(GetTexTile(key)) return;
-        atlas[key] = TexTile(tp, ts);
-      }
-
-      std::string GenItemKey(int x, int y) const {
-        return "X" + std::to_string(x) + "Y" + std::to_string(y);
-      };
-
-      std::string GenItemKey(std::string name, int x, int y) const {
-        return name + "_" + std::to_string(x) + "_" + std::to_string(y);
-      };
-  };
-
-  class ShaderUniform1f {
-    int index;
-    std::string name;
-    float val;
-  };
-
-  class Shader : public BaseMsg {
-    public:
-    virtual int LoadVert(const std::string & text) = 0;
-    virtual int LoadFrag(const std::string & text) = 0;
-    virtual int CreateProgram() = 0;
-    virtual int AddUniform(const std::string name) = 0;
-    virtual int GetUniform(const std::string name) = 0;
-    virtual void UpdateUniform1f(const int & pos, const float & val) = 0;
-    virtual void EnableTexture(const int & pos, const int index) = 0;
-    virtual ~Shader(){};
-  };
-
-  class QuadsArray : public BaseMsg {
-    virtual unsigned int IndexToId(unsigned int quad_index) = 0;
-    virtual unsigned int IdToIndex(unsigned int id) = 0;
-    virtual bool IsFreeIndex(unsigned int quad_index) = 0;
-    virtual unsigned int GetDefaultId(){
-      if(++last_quad_id >= max_quads_number) last_quad_id = 0;
-      return last_quad_id;
-    }
-
-    protected:
-    bool dirty = false;
-    unsigned int last_quad_id = -1, max_quads_number = 0;
-    std::stack<unsigned int> free_positions;
-    virtual unsigned int FindFreePosition(){
-      /// search free position in data array
-      if(free_positions.size()) {
-        unsigned int index = free_positions.top();
-        free_positions.pop();
-        return index;
-      }
-      for(unsigned int i = last_quad_id+1; i < max_quads_number; i++){
-        if(IsFreeIndex(i)){ last_quad_id = i; return i; }
-      }
-      for(unsigned int i = 0; i <= last_quad_id; i++){
-        if(IsFreeIndex(i)){ last_quad_id = i; return i; }
-      }
-      msg_warning("can't find free position");
-      return GetDefaultId();
-    }
-
-    public:
-    QuadsArray(unsigned int max_quads_number){ this->max_quads_number = max_quads_number; };
-    virtual ~QuadsArray(){};
-
-    //! add element to the array
-    virtual unsigned int Add(TextureDrawData * quad_data) = 0;
-
-    //! update array data full
-    virtual void Set(const unsigned int & id, TextureDrawData * quad_data) = 0;
-
-    //! update array data position only
-    virtual void SetPos(const unsigned int & id, TextureDrawData * quad_data) = 0;
-
-    //! update array data texture only
-    virtual void SetText(const unsigned int & id, TextureDrawData * quad_data) = 0;
-
-    //! change position of element by shift 2d value
-    virtual void Move(const unsigned int & id, const v2 & shift) = 0;
-
-    //! remove all elements from array
-    virtual void Clean(){};
-
-    //! remove one elements from array
-    virtual void Remove(const unsigned int & id) = 0;
-
-    //! draw
-    virtual void Draw() = 0;
-  };
-
   class FrameBuffer : public BaseMsg {
     /// frame buffer is a texture + depth buffer stored at GPU and with fast GPU access
     protected:
@@ -337,12 +225,15 @@ namespace pmgd {
     std::string accelerator;
     std::string io;
     std::string img;
+    int fps = 60;
 
     // aliases
     bool gl;
+    bool soft_render;
 
     void Finilize(){
       gl = accelerator == "GL";
+      soft_render = accelerator == "";
     }
 
     std::string AsString(){
@@ -362,43 +253,14 @@ namespace pmgd {
     }
   };
 
-  class Window {
-    public:
-    virtual ~Window() {}
-  };
-
   class ScenePipeline : public BaseMsg {
-    PipelineGraph<std::string> pg;
-    std::vector<std::string*> pipeline;
+    std::shared_ptr<PipelineGraph<std::string>> pg;
 
     public:
-    bool builded = false;
-
     int AddChain(const std::string & chain){
-      builded = false;
-      return add_strdata_to_pipeline(chain, pg);
+      return 0;
+      // return add_strdata_to_pipeline(chain, pg);
     }
-
-    int Build(){
-      pipeline = pg.GetPipeline();
-      msg_verbose(join_string_ptrs(pipeline));
-      builded = true;
-      return pipeline.size() ? PM_SUCCESS : PM_ERROR;
-    }
-  };
-
-  class FrameDrawer : public BaseMsg {
-  };
-
-  class TextureDrawer : public BaseMsg {
-    public:
-    std::string shader_id, texture_id;
-    TextureDrawData data;
-    Texture *texture;
-    Shader *shader;
-    TextureDrawer(){};
-    virtual void Draw(){}
-    virtual ~TextureDrawer(){};
   };
 
   class Scene : public DataContainer {
@@ -414,15 +276,7 @@ namespace pmgd {
 
     int Warm(){
       /// Warm up pipelines
-      std::vector<std::shared_ptr<ScenePipeline>> pipelines = Objects<ScenePipeline>();
-      int ret_tot = PM_SUCCESS;
-      for(auto pipeline : pipelines){
-        int ret = pipeline->Build();
-        if(ret != PM_SUCCESS){
-          ret_tot = ret;
-        }
-      }
-      return ret_tot;
+      return PM_SUCCESS;
     }
 
     int SetPipeline(std::string & key){
@@ -433,17 +287,31 @@ namespace pmgd {
         return PM_ERROR_404;
       }
       active_pipeline_id = key;
-      active_pipeline = Get<ScenePipeline>(key).get();
+      active_pipeline = pipeline.get();
       return PM_SUCCESS;
     }
+
+    ScenePipeline * GetPipeline(){ return active_pipeline; }
   };
 
+  class Window {
+    public:
+    virtual ~Window() {}
+  };
+  class Render;
   class SysFactory : public BaseMsg {
     public:
-    virtual std::shared_ptr<Window> CreateWindow(const SysOptions & opts) {return nullptr;}
+    virtual std::shared_ptr<Window> MakeWindow(const SysOptions & opts) {return nullptr;}
+    virtual std::shared_ptr<Render> MakeRender(const SysOptions & opts, std::shared_ptr<Window> w) {return nullptr;}
+    virtual std::shared_ptr<Core> MakeCore(const SysOptions & opts) {return nullptr;}
     virtual ~SysFactory() {};
   };
 
+  class Texture;
+  class Shader;
+  class FrameDrawer;
+  class TextureDrawer;
+  class SimpleDrawer;
   class AccelFactory {
     /// accelerated class object maker
     public:
@@ -452,6 +320,7 @@ namespace pmgd {
     virtual std::shared_ptr<Shader> MakeShader(const std::string & vert_txt, const std::string & frag_txt) {return nullptr;}
     virtual std::shared_ptr<FrameDrawer> MakeFrameDrawer(){return nullptr;}
     virtual std::shared_ptr<TextureDrawer> MakeTextureDrawer(){return nullptr;}
+    virtual std::shared_ptr<SimpleDrawer> MakeSimpleDrawer(){return nullptr;}
     // virtual std::shared_ptr<SceneRender> MakeSceneRender(){return nullptr;}
     virtual ~AccelFactory() {};
   };

@@ -41,4 +41,9 @@ TEST(pmlib_core, str_to_renderpipeline) {
   EXPECT_TRUE(str_to_renderpipeline_check(pipeline, 3, dc, "ps", "window"));
 }
 
+TEST(pmlib_core, scene_to_render) {
+  // input Scene
+  // output Render pipeline
+}
+
 #endif

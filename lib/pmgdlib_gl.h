@@ -485,7 +485,7 @@ namespace pmgd {
     text.Unbind();
   };
 
-  class QuadsArrayGl : public QuadsArray {
+  class ArrayDrawerGl : public ArrayDrawer {
     float* data;
     unsigned int array_size, array_size10;
     int* indexes;
@@ -503,7 +503,7 @@ namespace pmgd {
     };
 
     public:
-    QuadsArrayGl(unsigned int max_quads_number) : QuadsArray(max_quads_number) {
+    ArrayDrawerGl(unsigned int max_quads_number) : ArrayDrawer(max_quads_number) {
       msg_debug("constructor call");
       array_size = quad_aray_size * max_quads_number;
       array_size10 = array_size/10;
@@ -558,7 +558,7 @@ namespace pmgd {
       glBindVertexArray(0);
     }
 
-    virtual ~QuadsArrayGl(){
+    virtual ~ArrayDrawerGl(){
       msg_debug("destructor call");
       delete[] data;
       delete[] indexes;
@@ -676,8 +676,6 @@ namespace pmgd {
       data[id+7]  = sys::PERSPECTIVE_EDGE;
       data[id+12] = sys::PERSPECTIVE_EDGE;
       data[id+17] = sys::PERSPECTIVE_EDGE;
-      if(free_positions.size() < array_size10) free_positions.push(IdToIndex(id));
-      dirty = true;
     }
 
     void Draw(){
@@ -821,13 +819,13 @@ glVertex3f
   };
 
   // class SceneRenderGl: public SceneRender {
-  //   std::shared_ptr<QuadsArrayGl> screen_qad;
+  //   std::shared_ptr<ArrayDrawerGl> screen_qad;
   //   std::shared_ptr<ShaderGl> default_shader;
 
   //   public:
   //   SceneRenderGl(){
   //     /// "screen_qad" is used to draw 1 full screen frame to screen or another framebuffer
-  //     screen_qad = std::make_shared<QuadsArrayGl>(1);
+  //     screen_qad = std::make_shared<ArrayDrawerGl>(1);
 
   //     /// "default_shader" is used to draw when no other shaders were provided
   //     /// it is mandatory for OpenGL

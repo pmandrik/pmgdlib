@@ -17,7 +17,7 @@
 #endif
 
 namespace pmgd {
-
+  // ======= Factory ====================================================================
   class Factory {
     public:
     std::shared_ptr<AccelFactory> accel_imp = std::make_shared<AccelFactory>();
@@ -31,10 +31,14 @@ namespace pmgd {
     template<typename... Args> std::shared_ptr<Shader>
     MakeShader(Args... args){return accel_imp->MakeShader(std::forward<Args>(args)...);}
 
-    std::shared_ptr<Window> CreateWindow(const SysOptions & opts){return sys_imp->CreateWindow(opts);}
+    std::shared_ptr<Window> MakeWindow(const SysOptions & opts){return sys_imp->MakeWindow(opts);}
+    template<typename... Args> std::shared_ptr<Render> 
+    MakeRender(Args... args){return sys_imp->MakeRender(std::forward<Args>(args)...);}
+    template<typename... Args> std::shared_ptr<Core>
+    MakeCore(Args... args){return sys_imp->MakeCore(std::forward<Args>(args)...);}
 
     template<typename... Args> std::shared_ptr<Scene>
-    MakeScene(Args... args){ return std::make_shared<Scene>(std::forward<Args>(args)...); }
+    MakeScene(Args... args){ return std::make_shared<Scene>(std::forward<Args>(args)...);}
 
     template<typename... Args> std::shared_ptr<ScenePipeline>
     MakeScenePipeline(Args... args){ return std::make_shared<ScenePipeline>(std::forward<Args>(args)...); }
@@ -45,249 +49,19 @@ namespace pmgd {
     template<typename... Args> std::shared_ptr<TextureDrawer>
     MakeTextureDrawer(Args... args){return accel_imp->MakeTextureDrawer(std::forward<Args>(args)...);}
 
+    template<typename... Args> std::shared_ptr<SimpleDrawer>
+    MakeSimpleDrawer(Args... args){return accel_imp->MakeSimpleDrawer(std::forward<Args>(args)...);}
+
     //template<typename... Args> std::shared_ptr<SceneRender>
     //MakeSceneRender(Args... args){return accel_imp->MakeSceneRender(std::forward<Args>(args)...);}
   };
 
-  class Backend {
-    public:
-    std::shared_ptr<IO> io = std::make_shared<IO>();
-    std::shared_ptr<Factory> factory = std::make_shared<Factory>();
-  };
+  // ======= Backend ====================================================================
+  //! Backend combines Factory to create objects and IO to read data from storage
+  class Backend : public IO, public Factory {};
 
-  Backend get_backend(const SysOptions & options){
-    int verbose_lvl = msg_verbose_lvl();
-
-    msg_debug("Factory backend start ...");
-    Backend back;
-
-    #ifdef USE_GL
-    if(options.accelerator == "GL"){
-      msg_debug("use GL accelerator backend");
-      back.factory->accel_imp = std::make_shared<AccelFactoryGL>();
-    }
-    #endif
-
-    if(options.io == "SDL"){
-      #ifdef USE_SDL
-        msg_debug("use SDL IO backend");
-        back.io->txt_imp = std::make_shared<IoTxtSDL>();
-      #else
-        msg_warning("to use SDL IO recompile sources with -DUSE_SDL");
-      #endif
-    }
-
-    if(options.multimedia_library == "SDL"){
-      #ifdef USE_SDL
-        msg_debug("use SDL multimedia backend");
-        back.factory->sys_imp = std::make_shared<SysFactorySDL>();
-      #else
-        msg_warning("to use SDL multimedia_library recompile sources with -DUSE_SDL");
-      #endif
-    }
-
-    #ifdef USE_STB
-    if(options.img == "STB"){
-      msg_debug("use STB image IO backend");
-      back.io->img_imp = std::make_shared<IoImageStb>();
-    }
-    #endif
-
-    msg_debug("Factory backend ok ...");
-    return back;
-  };
-
-  class SceneDataLoader : public BaseMsg {
-    // process stack
-    std::vector<const ConfigItem*> processed_stack;
-    std::string GetFatherAttribute(std::string attr, unsigned int depth=1){
-      if(depth > processed_stack.size()) return "";
-      const ConfigItem * father = processed_stack.at(processed_stack.size() - depth);
-      return father->Attribute(attr);
-    }
-
-    // loaders
-    int LoadImage(std::string id, std::string path){
-      msg_debug("load image, id =", quotec(id), "path =", quote(path));
-  
-      if(not path.size()){
-        msg_warning("empty path");
-        return PM_ERROR_INCORRECT_ARGUMENTS;
-      }
-  
-      if(not id.size()){
-        msg_debug("id = '', use full file name as id");
-        id = path;
-      }
-  
-      std::shared_ptr<Image> image = io->ReadImage(path);
-      if(not image){
-        msg_warning("failed to load image");
-        return PM_ERROR_IO;
-      }
-
-      dc.Add(id, image);
-      return PM_SUCCESS;
-    }
-
-    int LoadTexture(const ConfigItem & cfg){
-      // id = "id"
-      // image = "image_id", "image_path"
-      std::string id = cfg.Attribute("id");
-
-      /// find/load image
-      std::string image_id = cfg.Attribute("image_id");
-      std::string image_path = cfg.Attribute("image_path");
-      if(image_path.size()){
-        msg_debug("texture image is passed by path", quote(image_path));
-        int err = LoadImage(image_id, image_path);
-        if(err != PM_SUCCESS){
-          msg_warning("texture image load failed", quote(image_path));
-          return err;
-        }
-
-        if(not image_id.size()) image_id = image_path;
-      } else msg_debug("texture image is passed by id =", quote(image_id));
-      
-
-      /// build texture
-      std::shared_ptr<Image> img = dc.Get<Image>(image_id);
-      if(img == nullptr){
-        msg_warning("can't find image", quote(image_id));
-        return PM_ERROR_INCORRECT_ARGUMENTS;
-      }
-      std::shared_ptr<Texture> texture = factory->MakeTexture(img);
-      dc.Add(id, texture);
-      return PM_SUCCESS;
-    }
-
-    int LoadShader(const ConfigItem & cfg){
-      std::string id = cfg.Attribute("id");
-      std::string vert_path = cfg.Attribute("vert");
-      std::string frag_path = cfg.Attribute("frag");
-
-      std::string vert_txt = io->ReadTxt(vert_path);
-      std::string frag_txt = io->ReadTxt(frag_path);
-
-      std::shared_ptr<Shader> shader = factory->MakeShader(vert_txt, frag_txt);
-      dc.Add(id, shader);
-      return PM_SUCCESS;
-    }
-
-    int LoadScene(const ConfigItem & cfg){
-      std::string id = cfg.Attribute("id");
-      std::shared_ptr<Scene> scene = factory->MakeScene(id);
-      dc.Add(id, scene);
-      return PM_SUCCESS;
-    }
-
-    int LoadPipelineChain(const ConfigItem & cfg){
-      std::shared_ptr<Scene> scene = dc.Get<Scene>(GetFatherAttribute("id", 2));
-      std::string pipeline_id = GetFatherAttribute("id");
-      
-      if(CWM(not scene or not pipeline_id.size(), "pipeline", quotec(pipeline_id), "required to be a part of scene and pipeline")) 
-        return PM_ERROR_SCHEMA;
-
-      auto pipeline = scene->Get<ScenePipeline>(pipeline_id);
-      if(pipeline == nullptr) {
-        scene->Add(pipeline_id, factory->MakeScenePipeline());
-        pipeline = scene->Get<ScenePipeline>(pipeline_id);
-      }
-
-      std::string value = cfg.Attribute("data");
-      return pipeline->AddChain(value);
-    }
-
-    int LoadFrameDrawer(const ConfigItem & cfg){
-      std::shared_ptr<Scene> scene = dc.Get<Scene>(GetFatherAttribute("id"));
-      if(CWM(not scene, "FrameDrawer is required to be a part of scene")) return PM_ERROR_SCHEMA;
-
-      std::string id = cfg.Attribute("id");
-      return scene->Add(id, factory->MakeFrameDrawer()); // TODO
-    }
-
-    int LoadTextureDrawer(const ConfigItem & cfg){
-      std::shared_ptr<Scene> scene = dc.Get<Scene>(GetFatherAttribute("id"));
-      if(CWM(not scene, "TextureDrawer is required to be a part of scene")) return PM_ERROR_SCHEMA;
-
-      // TODO read pos, size
-      // TODO read options
-
-      std::shared_ptr<TextureDrawer> td = factory->MakeTextureDrawer();
-      td->shader_id = cfg.Attribute("shader");
-      td->texture_id = cfg.Attribute("texture");
-      std::string id = cfg.Attribute("id");
-      return scene->Add(id, td);
-    }
-
-    void AddRuleToCfg(Config & cfg, std::string key, std::vector <std::string> mandatory, std::vector <std::string> fathers,
-      std::function<int(const ConfigItem&)> proccessor){
-      ConfigSchema schema(mandatory, fathers);
-      cfg.AddProcessingRule(key, schema, proccessor);
-    }
-
-    std::shared_ptr<IO> io;
-    std::shared_ptr<Factory> factory;
-
-    int FinilizeFrameDrawer(std::shared_ptr<FrameDrawer> obj){
-      // obj->shader = dc.Get<Shader>(obj->shader_id);
-      return PM_SUCCESS;
-    }
-
-    int FinilizeTextureDrawer(std::shared_ptr<TextureDrawer> obj){
-      obj->shader = dc.Get<Shader>(obj->shader_id).get();
-      obj->texture = dc.Get<Texture>(obj->texture_id).get();
-      return PM_SUCCESS;
-    }
-
-    int FinilizeScene(std::shared_ptr<Scene> obj){
-      return PM_SUCCESS;
-    }
-
-    template<typename T>
-    int Finilize(DataContainer &dc, const std::string & id, std::function<int(std::shared_ptr<T>)> proccessor){
-      std::vector<std::string> ids = dc.Ids<T>();
-      int ret_tot = PM_SUCCESS;
-      for(auto id : ids){
-        msg_verbose("object", quote(id), "finalization");
-        std::shared_ptr<T> obj = dc.Get<T>(id);
-        int ret = proccessor(obj);
-        if(ret != PM_SUCCESS) ret_tot = ret;
-      }
-      return ret_tot;
-    }
-
-    public:
-    DataContainer dc;
-    SceneDataLoader(const Backend & backend){
-      io = backend.io;
-      factory = backend.factory;
-    }
-
-    int Load(Config & cfg){
-      msg_debug("start ...");
-      msg_debug("cfg processing ...");
-      AddRuleToCfg(cfg, "texture", {"id"}, {}, [this](const ConfigItem & c) {return this->LoadTexture(c);});
-      AddRuleToCfg(cfg, "shader", {"id"}, {}, [this](const ConfigItem & c) {return this->LoadShader(c);});
-      AddRuleToCfg(cfg, "scene", {"id"}, {}, [this](const ConfigItem & c) {return this->LoadScene(c);});
-      AddRuleToCfg(cfg, "chain", {"data"}, {"pipeline", "scene"}, [this](const ConfigItem & c) {return this->LoadPipelineChain(c);});
-      AddRuleToCfg(cfg, "frame_drawer", {"id"}, {}, [this](const ConfigItem & c) {return this->LoadFrameDrawer(c);});
-      AddRuleToCfg(cfg, "texture_drawer", {"id"}, {}, [this](const ConfigItem & c) {return this->LoadTextureDrawer(c);});
-      processed_stack.clear();
-      int ret = cfg.ProcessItems(processed_stack);
-      if(ret != PM_SUCCESS) return ret;
-
-      //! finalize
-      msg_debug("objects finalization ...");
-      Finilize<Scene>(dc, "scene", [this](std::shared_ptr<Scene> c) {
-        Finilize<FrameDrawer>(*c, "frame_drawer", [this](std::shared_ptr<FrameDrawer> c) {return this->FinilizeFrameDrawer(c);});
-        Finilize<TextureDrawer>(*c, "texture_drawer", [this](std::shared_ptr<TextureDrawer> c) {return this->FinilizeTextureDrawer(c);});
-        return this->FinilizeScene(c);
-      });
-
-      return PM_SUCCESS;
-    }
-  };
+  //! function to create and setup Backend class 
+  std::shared_ptr<Backend> get_backend(const SysOptions & options);
 
   class Builder : public BaseMsg {
     std::shared_ptr<DataContainer> dc = nullptr;
@@ -334,6 +108,240 @@ namespace pmgd {
       return p;
     }
   };
+
+  //! Create objects from ProtoObjects and put into DataContainer
+  class ProtoBuilder : public BaseMsg {
+    std::shared_ptr<Backend> back;
+    std::shared_ptr<NdMap<ProtoObject>> ndmap = nullptr;
+    std::vector<NdKey> namespaces;
+    std::map<std::string, std::function<std::shared_ptr<void>(const ConfigItem*)>> processors;
+
+    int BuildTexture(std::shared_ptr<ProtoObject> po){
+      const ConfigItem * cfg = po->cfg_item;
+
+      return PM_SUCCESS;
+    }
+
+    auto BuildShader(const ConfigItem* cfg){
+      std::string vert_path = cfg->Attribute("vert");
+      std::string frag_path = cfg->Attribute("frag");
+
+      std::string vert_txt = back->ReadTxt(vert_path);
+      std::string frag_txt = back->ReadTxt(frag_path);
+
+      std::shared_ptr<Shader> obj = back->MakeShader(vert_txt, frag_txt);
+      return obj;
+    }
+
+    auto BuildScene(const ConfigItem* cfg){
+      std::string id = cfg->Attribute("id");
+      std::shared_ptr<Scene> obj = back->MakeScene(id);
+      return obj;
+    }
+
+    template<typename T>
+    std::shared_ptr<T> GetDependence(const ConfigItem* cfg, std::string id_key, std::string type = ""){
+      std::string id = cfg->Attribute(id_key);
+      if(not type.size()) type = id_key;
+
+      NdKey key(type, id);
+      std::shared_ptr<ProtoObject> po = ndmap->GetOne(namespaces, key);
+      if(po == nullptr) return nullptr;
+      if(not po->IsWarm()) BuildObject(po);
+      return std::static_pointer_cast<T>(po->object);
+    }
+
+    auto BuildSimpleDrawer(const ConfigItem* cfg){
+      std::string texture_id = cfg->Attribute("texture");
+
+      auto texture = GetDependence<Texture>(cfg, "texture");
+
+      std::shared_ptr<SimpleDrawer> obj = back->MakeSimpleDrawer();
+      return obj;
+    }
+
+    auto BuildPipeline(const ConfigItem* cfg){
+      std::vector<std::string> chains = cfg->GetAttrsFromNested("chain", "data");
+      // std::shared_ptr<Pipeline> obj = back->MakePipeline();
+    }
+
+    int BuildObject(std::shared_ptr<ProtoObject> po){
+      //! do not reload object if warm
+      if(po->IsWarm()){
+        return PM_SUCCESS;
+      }
+
+      //! get config from proto object and build
+      const ConfigItem* cfg = po->cfg_item;
+      std::string type = cfg->type;
+
+      auto find = processors.find(type);
+      if(find == processors.end()){
+        return PM_ERROR;
+      }
+
+      msg_info("start build", type);
+      po->object = std::static_pointer_cast<void>(find->second(cfg));
+      return PM_SUCCESS;
+    }
+
+    public:
+    int BuildObjects(std::vector<NdKey> namespaces_, std::vector<std::shared_ptr<ProtoObject>> objects){
+      namespaces = namespaces_;
+
+      msg_debug("build start ...");
+      int ret = PM_SUCCESS;
+      for(auto object : objects){
+        int retloc = BuildObject(object);
+        if(retloc != PM_SUCCESS) ret = retloc;
+      }
+      msg_debug("build done ...");
+      return ret;
+    } 
+
+    ProtoBuilder(std::shared_ptr<Backend> back_, std::shared_ptr<NdMap<ProtoObject>> ndmap_){
+      back = back_;
+      ndmap = ndmap_;
+
+      processors["shader"] = [this](const ConfigItem* c) {return std::static_pointer_cast<void>(this->BuildShader(c));};
+      processors["drawer"] = [this](const ConfigItem* c) {return std::static_pointer_cast<void>(this->BuildSimpleDrawer(c));}; 
+      processors["scene"] = [this](const ConfigItem* c) {return std::static_pointer_cast<void>(this->BuildPipeline(c));};
+    }
+  };
 };
 
 #endif
+
+
+/*
+
+
+    // loaders
+    int LoadImage(std::string id, std::string path){
+      msg_debug("load image, id =", quotec(id), "path =", quote(path));
+  
+      if(not path.size()){
+        msg_warning("empty path");
+        return PM_ERROR_INCORRECT_ARGUMENTS;
+      }
+  
+      if(not id.size()){
+        msg_debug("id = '', use full file name as id");
+        id = path;
+      }
+  
+      std::shared_ptr<Image> image = back->ReadImage(path);
+      if(not image){
+        msg_warning("failed to load image");
+        return PM_ERROR_IO;
+      }
+
+      dc->Add(id, image);
+      return PM_SUCCESS;
+    }
+
+    int LoadTexture(const ConfigItem & cfg){
+      // id = "id"
+      // image = "image_id", "image_path"
+      std::string id = cfg.Attribute("id");
+
+      /// find/load image
+      std::string image_id = cfg.Attribute("image_id");
+      std::string image_path = cfg.Attribute("image_path");
+      if(image_path.size()){
+        msg_debug("texture image is passed by path", quote(image_path));
+        int err = LoadImage(image_id, image_path);
+        if(err != PM_SUCCESS){
+          msg_warning("texture image load failed", quote(image_path));
+          return err;
+        }
+
+        if(not image_id.size()) image_id = image_path;
+      } else msg_debug("texture image is passed by id =", quote(image_id));
+      
+      /// build texture
+      std::shared_ptr<Image> img = dc->Get<Image>(image_id);
+      if(img == nullptr){
+        msg_warning("can't find image", quote(image_id));
+        return PM_ERROR_INCORRECT_ARGUMENTS;
+      }
+      std::shared_ptr<Texture> texture = back->MakeTexture(img);
+      dc->Add(id, texture);
+      return PM_SUCCESS;
+    }
+
+    int LoadShader(const ConfigItem & cfg){
+      std::string id = cfg.Attribute("id");
+      std::string vert_path = cfg.Attribute("vert");
+      std::string frag_path = cfg.Attribute("frag");
+
+      std::string vert_txt = back->ReadTxt(vert_path);
+      std::string frag_txt = back->ReadTxt(frag_path);
+
+      std::shared_ptr<Shader> shader = back->MakeShader(vert_txt, frag_txt);
+      dc->Add(id, shader);
+      return PM_SUCCESS;
+    }
+
+    int LoadScene(const ConfigItem & cfg){
+      std::string id = cfg.Attribute("id");
+      std::shared_ptr<Scene> scene = back->MakeScene(id);
+      dc->Add(id, scene);
+      return PM_SUCCESS;
+    }
+
+    int LoadPipelineChain(const ConfigItem & cfg){
+      std::shared_ptr<Scene> scene = dc->Get<Scene>(GetFatherAttribute("id", 2));
+      std::string pipeline_id = GetFatherAttribute("id");
+      
+      if(CWM(not scene or not pipeline_id.size(), "pipeline", quotec(pipeline_id), "required to be a part of scene and pipeline")) 
+        return PM_ERROR_SCHEMA;
+
+      auto pipeline = scene->Get<ScenePipeline>(pipeline_id);
+      if(pipeline == nullptr) {
+        scene->Add(pipeline_id, back->MakeScenePipeline());
+        pipeline = scene->Get<ScenePipeline>(pipeline_id);
+      }
+
+      std::string value = cfg.Attribute("data");
+      return pipeline->AddChain(value);
+    }
+
+    int LoadFrameDrawer(const ConfigItem & cfg){
+      std::shared_ptr<Scene> scene = dc->Get<Scene>(GetFatherAttribute("id"));
+      if(CWM(not scene, "FrameDrawer is required to be a part of scene")) return PM_ERROR_SCHEMA;
+
+      std::string id = cfg.Attribute("id");
+      return scene->Add(id, back->MakeFrameDrawer()); // TODO
+    }
+
+    int LoadTextureDrawer(const ConfigItem & cfg){
+      std::shared_ptr<Scene> scene = dc->Get<Scene>(GetFatherAttribute("id"));
+      if(CWM(not scene, "TextureDrawer is required to be a part of scene")) return PM_ERROR_SCHEMA;
+
+      // TODO read pos, size
+      // TODO read options
+
+      std::shared_ptr<TextureDrawer> td = back->MakeTextureDrawer();
+      td->shader_id = cfg.Attribute("shader");
+      td->texture_id = cfg.Attribute("texture");
+      std::string id = cfg.Attribute("id");
+      return scene->Add(id, td);
+    }
+
+    int LoadSimpleDrawer(const ConfigItem & cfg){
+      std::shared_ptr<Scene> scene = dc->Get<Scene>(GetFatherAttribute("id"));
+      if(CWM(not scene, "Drawer is required to be a part of scene")) return PM_ERROR_SCHEMA;
+
+      std::shared_ptr<SimpleDrawer> d = back->MakeSimpleDrawer();
+      std::string id = cfg.Attribute("id");
+      return scene->Add(id, d);
+    }
+
+    std::string GetFatherAttribute(std::string attr, unsigned int depth=1){
+      if(depth > processed_stack.size()) return "";
+      const ConfigItem * father = processed_stack.at(processed_stack.size() - depth);
+      return father->Attribute(attr);
+    }
+
+*/

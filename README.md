@@ -18,6 +18,17 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DSDL_OPENGL=ON -DSDL_VULKAN=ON
 ```
 
+### SDL extensions
+https://github.com/libsdl-org/SDL_image/releases/tag/release-2.8.8
+```
+export SDL2_DIR="/home/petr/work/gd/SDL2-2.30.3"
+
+export SDL2_LIBRARY=/home/petr/work/gd/SDL2-2.30.3/build
+export SDL2_INCLUDE_DIR=../SDL2-2.30.3/build/include/SDL2/.
+cd SDL_image && mkdir build && cd build
+cmake ..
+```
+
 ### spdlog
 https://github.com/gabime/spdlog/releases/tag/v1.15.1
 Header-only implementation was found to be too heavy leading to unacceptable compile time.

@@ -8,10 +8,16 @@
   
 namespace pmgd {
   //=================================== MAP =========================================================
-  template <typename K, typename V> V map_get(const std::map <K,V> & m, const K & key, const V & defval ) {
+  template <typename K, typename V> V map_get(const std::map <K,V> & m, const K & key, const V & defval) {
     typename std::map<K,V>::const_iterator it = m.find( key );
     if ( it == m.end() ) return defval;
     return it->second;
+  }
+
+  template <typename K, typename V> const V * map_get_ptr(const std::map <K,V> & m, const K & key) {
+    typename std::map<K,V>::const_iterator it = m.find( key );
+    if ( it == m.end() ) return nullptr;
+    return &(it->second);
   }
 
   template <typename K, typename V> V unordered_map_get(const  std::unordered_map <K,V> & m, const K & key, const V & defval ) {

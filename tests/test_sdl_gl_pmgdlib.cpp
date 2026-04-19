@@ -175,7 +175,7 @@ TEST_F(TestSuite, double_frame_buffer) {
   shader.AddUniform("var0");
   shader.AddUniform("var1");
 
-  QuadsArrayGl qad(1);
+  ArrayDrawerGl qad(1);
   qad.Add(&dfb_data);
 
   for(int i = 0; i < 300; i++){
@@ -292,7 +292,7 @@ TEST_F(TestSuite, shader_uniform) {
   shader.AddUniform("var0");
 
   int n_quads = 100;
-  QuadsArrayGl qad(n_quads);
+  ArrayDrawerGl qad(n_quads);
 
   vector<unsigned int> ids;
   vector<TextureDrawData*> quads;
@@ -355,7 +355,7 @@ TEST_F(TestSuite, quad_array) {
   shader.CreateProgram();
 
   int n_quads = 1000;
-  QuadsArrayGl qad(n_quads);
+  ArrayDrawerGl qad(n_quads);
 
   vector<unsigned int> ids;
   vector<TextureDrawData*> quads;
@@ -418,7 +418,7 @@ TEST_F(TestSuite, draw_texture_atlas) {
   GTEST_COUT << "texture setup..." << std::endl;
   std::shared_ptr<Image> image = get_test_image();
   TextureGl td(image);
-  TextureAtlas atlas;
+  TexAtlas atlas;
 
   int n_quads = 30;
 
@@ -438,9 +438,9 @@ TEST_F(TestSuite, draw_texture_atlas) {
     float width = (rand() + 100) % 1000 / 1000.;
     if(width > 1.) width = 0.9;
     // width = 1;
-    atlas.AddTexTile(std::to_string(i), v2(0,0), v2(width, width));
+    atlas.Add(std::to_string(i), v2(0,0), v2(width, width));
 
-    TexTile * tile = atlas.GetTexTile(std::to_string(i));
+    TexTile * tile = atlas.Get(std::to_string(i));
     fill_texture_array(data, 20*i+3, tile->tpos, tile->tsize, 5);
   }
 
@@ -463,7 +463,7 @@ TEST_F(TestSuite, draw_texture_atlas) {
       v2 size = v2(size_x, size_y);
       fill_verices_array(data, qi*20, pos, size, 0, 5);
       int index = qi * (1 - ((i % n_quads) == qi));
-      TexTile * tile = atlas.GetTexTile(std::to_string(index));
+      TexTile * tile = atlas.Get(std::to_string(index));
       fill_texture_array(data, 20*qi+3, tile->tpos, tile->tsize, 5);
     }
 

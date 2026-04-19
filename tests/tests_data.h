@@ -8,8 +8,8 @@
 
 TEST(pmlib_data, io_load_dummy) {
   SysOptions bo;
-  Backend bk = get_backend(bo);
-  std::string txt_data = bk.io->ReadTxt("/any/path");
+  auto bk = get_backend(bo);
+  std::string txt_data = bk->ReadTxt("/any/path");
   EXPECT_EQ(txt_data, "dummy data");
 }
 
@@ -35,13 +35,13 @@ TEST(pmlib_data, data_container) {
 TEST(pmlib_data, stb) {
   SysOptions bo;
   bo.img = "STB";
-  Backend bk = get_backend(bo);
+  auto bk = get_backend(bo);
 
   std::shared_ptr<Image> img = get_test_image(image_type::UNSIGNED_CHAR);
-  int ok = bk.io->WriteImage("img.png", img);
+  int ok = bk->WriteImage("img.png", img);
   EXPECT_EQ(ok, PM_SUCCESS);
 
-  std::shared_ptr<Image> img2 = bk.io->ReadImage("img.png");
+  std::shared_ptr<Image> img2 = bk->ReadImage("img.png");
   EXPECT_EQ(img2->w, img->w);
   EXPECT_EQ(img2->h, img->h);
   for(int ww = 0; ww < img2->w; ww++){

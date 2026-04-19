@@ -67,10 +67,8 @@ namespace pmgd {
     int ret = parse_pipeline_str(str, data);
     if(ret != PM_SUCCESS) return ret;
 
-    int lp = 0;
     for(auto node : data.nodes){
-      pg.AddNode(node, lp);
-      lp++;
+      pg.AddNode(node);
     }
   
     for(auto edge : data.edges){

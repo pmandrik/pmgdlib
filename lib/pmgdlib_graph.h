@@ -39,10 +39,15 @@ namespace pmgd {
     private:
       class Node {
         public:
-          Node(NODE_ID_TYPE id, int priority){this->id = id; this->local_priority = priority;}
+          Node(NODE_ID_TYPE id, int priority, int serial_number){
+            this->id = id; 
+            this->local_priority = priority;
+            this->serial_number = serial_number;
+          }
           NODE_ID_TYPE id;
           int local_priority;
           int priority = 0;
+          int serial_number;
           std::set<NODE_ID_TYPE> sources;
           std::set<NODE_ID_TYPE> targets;
       };
@@ -51,11 +56,13 @@ namespace pmgd {
         bool operator()(Node* lhs, Node* rhs) const {
           if(lhs->priority != rhs->priority) return lhs->priority < rhs->priority;
           if(lhs->local_priority != rhs->local_priority) return lhs->local_priority < rhs->local_priority;
+          if(lhs->serial_number != rhs->serial_number) return lhs->serial_number < rhs->serial_number;
           return lhs->id < rhs->id;
         }
       };
 
       std::unordered_map<NODE_ID_TYPE, Node*> nodes;
+      int node_counter = 0;
 
       bool GetPipelineRec(Node* head, std::set<NODE_ID_TYPE>* veto){
         int new_priority = head->priority-1;
@@ -87,7 +94,7 @@ namespace pmgd {
       //! add new node with given id if id not in the graph
       int AddNode(NODE_ID_TYPE id, int local_priority = 0){
         if(nodes.count(id)) return PM_ERROR_DUPLICATE;
-        nodes[id] = new Node(id, local_priority);
+        nodes[id] = new Node(id, local_priority, node_counter++);
         return PM_SUCCESS;
       }
 

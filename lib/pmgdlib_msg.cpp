@@ -21,10 +21,10 @@ namespace pmgd {
     }
   #else
     std::string msg_trace(){
-      return std::string(__FUNCTION__) + ":";
+      return "";
     }
     std::string msg_short_trace(){
-      return std::string(__FUNCTION__) + ":";
+      return "";
     }
   #endif
   

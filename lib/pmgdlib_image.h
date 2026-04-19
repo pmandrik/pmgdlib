@@ -16,25 +16,30 @@
   #include "stb_image_write.h"
 #endif
 
+#ifdef USE_SDL_IMAGE
+  #include <SDL_image.h>
+#endif
+
 namespace pmgd {
 
   // image base class
   class Image {
     public:
       void *data;
+      void *userdata;
       int w,h;
       int format, type;
       v2 size;
 
     public:
-      Image(void *data, int w, int h, int format, int type){
-        this->data = data;
-        this->w = w;
-        this->h = h;
-        this->format = format;
-        this->type = type;
+      Image(void *data_, int w_, int h_, int format_, int type_, void* userdata_=nullptr){
+        data = data_;
+        w = w_;
+        h = h_;
+        format = format_;
+        type = type_;
+        userdata = userdata_;
         size = v2(w,h);
-
       }
   };
 
@@ -72,6 +77,27 @@ namespace pmgd {
         if(image->format == image_format::RGBA) n = 4;
         return stbi_write_png(path.c_str(), image->w, image->h, n, image->data, 0) ? PM_SUCCESS : PM_ERROR_STB;
       }
+    };
+  #endif
+
+  #ifdef USE_SDL_IMAGE
+    class IoImageSdl : public IoImage {
+      public:
+      virtual std::shared_ptr<Image> Read(const std::string & path) {
+        SDL_Surface * tmp = IMG_Load(path.c_str());
+        if(tmp == NULL){
+          return nullptr;
+        }
+
+        SDL_PixelFormat * target = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
+        SDL_Surface * surf = SDL_ConvertSurface(tmp, target, 0);
+        SDL_FreeSurface(tmp);
+        SDL_FreeFormat(target);
+
+        int format = image_format::RGBA;
+        int type = image_type::UNSIGNED_CHAR;
+        return std::make_shared<Image>((void*)surf->pixels, surf->w, surf->h, format, type, (void*)surf);
+      };
     };
   #endif
 };

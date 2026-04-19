@@ -27,6 +27,20 @@ namespace pmgd {
       unsigned int mtime, itime;
       float dtime, ftime;
   };
+
+  //! Class to enforce FPS requirements
+  class Clocker {
+    public:
+    int fps;
+    Clocker(int fps_){ fps = fps_; }
+    virtual ~Clocker(){}
+
+    //! calc time to sleep & sleep, return measure of delay
+    virtual float Tickf(void){ return 0.f; }
+
+    //! calc time to sleep & sleep
+    virtual void Tick(void){}
+  };
 };
 
 #endif
